@@ -404,6 +404,8 @@ const S={
   saveErr:T('Saved on this device. Waiting for internet to save online…','Salvo neste aparelho. Aguardando internet para salvar online…'),
   autosave:T('Your answers are saved automatically','Suas respostas são salvas automaticamente'),
   restored:T('Welcome back! We restored your answers.','Bem-vindo(a) de volta! Recuperamos suas respostas.'),
+  renewed:T('Your previous answers are already filled in. Change only what is new, then sign and submit.','Suas respostas anteriores já estão preenchidas. Altere só o que mudou, depois assine e envie.'),
+  renewFail:T('This renewal link could not be opened. You can fill in the form normally.','Não foi possível abrir este link de renovação. Você pode preencher o formulário normalmente.'),
   reviewTitle:T('Check your answers','Confira suas respostas'),reviewIntro:T('Read everything carefully before signing. Click "Edit" to change any part.','Leia tudo com atenção antes de assinar. Clique em "Editar" para mudar qualquer parte.'),
   edit:T('Edit','Editar'),notAnswered:T('Not answered','Sem resposta'),signed:T('Signed','Assinado'),
   laterTitle:T('Continue later','Continuar depois'),
@@ -888,9 +890,15 @@ async function boot(){
   const local=readLocal();
   st.lang=(local&&local.lang)||((navigator.language||'pt').toLowerCase().startsWith('en')?'en':'pt');
   document.documentElement.lang=st.lang==='pt'?'pt-BR':'en';
-  let src=null;
+  let src=null,renewed=false,renewFail=false;
   const draft=/^[A-Za-z0-9]{16,40}$/.test(p.draft||'')?p.draft:null;
-  if(LIVE&&draft){
+  const renew=/^[A-Za-z0-9]{16,40}$/.test(p.renew||'')?p.renew:null;
+  if(LIVE&&renew&&!draft){
+    $app.innerHTML=''; $app.append(header());
+    try{ const r=JSON.parse(await call('startRenewal',FID,renew,GAS?'':pageUrl()));
+      src=Object.assign({},r.data,{draftId:r.draftId}); renewed=true;
+    }catch(e){ renewFail=true; setUrl({form:FID}); }
+  } else if(LIVE&&draft){
     $app.innerHTML=''; $app.append(header());
     try{ const r=JSON.parse(await call('getDraft',FID,draft)||'null');
       if(r&&r.submitted){ st.submitted=true; render(); return; }
@@ -903,7 +911,9 @@ async function boot(){
   if(src){ st.answers=src.answers||{}; st.step=Math.min(src.step||0,F.steps.length-1); st.maxStep=Math.max(src.maxStep||0,st.step); st.draftId=src.draftId||null; st.updatedAt=src.updatedAt||0; restored=Object.keys(st.answers).length>0; }
   if(LIVE&&st.draftId) setUrl({form:FID,draft:st.draftId});
   render();
-  if(restored){ toast(tr(S.restored)); setSave(LIVE?'ok':'local'); saveState.t=st.updatedAt||Date.now(); paintStatus(); }
+  if(renewed){ toast(tr(S.renewed)); saveLocal(); setSave('ok'); }
+  else if(renewFail) toast(tr(S.renewFail));
+  else if(restored){ toast(tr(S.restored)); setSave(LIVE?'ok':'local'); saveState.t=st.updatedAt||Date.now(); paintStatus(); }
 }
 boot();
 })();
