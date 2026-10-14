@@ -537,7 +537,7 @@ function changed(){
 async function saveServer(){
   if(!LIVE||!dirty||saving||st.done) return;
   ensureDraft(); dirty=false; saving=true; setSave('saving');
-  try{ const r=await call('saveDraft',FID,st.draftId,JSON.stringify({answers:st.answers,step:st.step,maxStep:st.maxStep,updatedAt:st.updatedAt,meta:meta()}));
+  try{ const r=await call('saveDraft',FID,st.draftId,JSON.stringify({answers:st.answers,step:st.step,maxStep:st.maxStep,updatedAt:st.updatedAt,meta:meta(),summaryText:summaryText()}));
        if(r&&r.submitted){ st.submitted=true; render(); return; }
        setSave('ok'); }
   catch(e){ dirty=true; setSave('err'); clearTimeout(tServer); tServer=setTimeout(saveServer,15000); }
@@ -579,7 +579,7 @@ function render(keepScroll){
 function header(){
   const f=F; const wrap=h('div');
   wrap.append(h('div',{class:'topbar'},
-    h('div',{class:'brand'},'Trip Study ',h('span',null,'· Gold Coast')),
+    h('div',{class:'brand'},'Trip Study'),
     h('div',{class:'lang',role:'group','aria-label':'Language / Idioma'},
       h('button',{type:'button','aria-pressed':String(st.lang==='en'),onclick:()=>setLang('en')},'English'),
       h('button',{type:'button','aria-pressed':String(st.lang==='pt'),onclick:()=>setLang('pt')},'Português'))));
@@ -786,6 +786,13 @@ function collect(lang){
     });
     return {step:si,section:L(s.title),rows};
   });
+}
+function summaryText(){
+  const m=meta(); const lines=[`${tr.call(null,F.title)} – ${m.name||'(sem nome)'}`,`Atualizado em ${new Date().toLocaleString('pt-BR')} · parou na etapa ${m.step}`,'',''];
+  const saveLang=st.lang; st.lang='pt';
+  collect('pt').forEach(sec=>{ const rows=sec.rows.filter(r=>!r.sig); if(!rows.length) return;
+    lines.push('=== '+sec.section+' ==='); rows.forEach(r=>lines.push(r.label+': '+(r.value||'—'))); lines.push(''); });
+  st.lang=saveLang; return lines.join('\n');
 }
 function reviewBlock(){
   const wrap=h('div',{class:'review'});
@@ -1073,7 +1080,7 @@ async function docsMyLink(){
 function chooser(){
   st.lang=(navigator.language||'pt').toLowerCase().startsWith('en')?'en':'pt';
   const draw=()=>{ $app.innerHTML='';
-    $app.append(h('div',{class:'topbar'},h('div',{class:'brand'},'Trip Study ',h('span',null,'· Gold Coast')),
+    $app.append(h('div',{class:'topbar'},h('div',{class:'brand'},'Trip Study'),
       h('div',{class:'lang',role:'group','aria-label':'Language / Idioma'},
         h('button',{type:'button','aria-pressed':String(st.lang==='en'),onclick:()=>{st.lang='en';draw();}},'English'),
         h('button',{type:'button','aria-pressed':String(st.lang==='pt'),onclick:()=>{st.lang='pt';draw();}},'Português'))));
