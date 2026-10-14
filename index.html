@@ -557,7 +557,7 @@ function maskMonth(v,allow){ if(/[a-zA-Z]/.test(v)) return v; const d=v.replace(
 
 /* ---------- rendering ---------- */
 let toastT=null;
-function toast(msg){ const old=document.querySelector('.toast'); if(old) old.remove(); const t=h('div',{class:'toast',role:'status'},msg); document.body.append(t); clearTimeout(toastT); toastT=setTimeout(()=>t.remove(),3800); }
+function toast(msg){ const old=document.querySelector('.toast'); if(old) old.remove(); const t=h('div',{class:'toast',role:'status'},msg); document.body.append(t); clearTimeout(toastT); toastT=setTimeout(()=>t.remove(),Math.max(4000,msg.length*70)); }
 
 function render(keepScroll){
   const y=window.scrollY; $app.innerHTML=''; $nav.hidden=true;
@@ -873,42 +873,59 @@ function confirmStartOver(){
    3. DOCUMENT CHECKLIST (?form=docs)
    ================================================================ */
 const I=(k,pt,en,o)=>Object.assign({k,label:T(en||pt,pt),file:pt},o||{});
+const TPL=(href,pt,en)=>({href:href,label:T(en,pt)});
 const DOCS={
   title:T('Document Checklist – Student Visa 500','Checklist de Documentos – Student Visa 500'),
   lead:T('Upload each document in its item below. Everything goes straight to Trip Study, and you can see what is still missing. You can come back at any time with your personal link.','Anexe cada documento no item correspondente abaixo. Tudo vai direto para a Trip Study e você vê o que ainda falta. Pode voltar quando quiser pelo seu link pessoal.'),
+  notice:T('<b>IMPORTANT</b><ul><li>Please send your documents in <b>PDF</b> format. Documents in other formats will not be accepted.</li><li>Our team takes <b>3 to 5 business days</b> to review and reply after receiving your documents.</li></ul>',
+           '<b>IMPORTANTE</b><ul><li>Agradecemos por nos enviar os documentos necessários no formato em <b>PDF</b>. Não serão aceitos documentos em outro formato.</li><li>O prazo para análise e resposta da nossa equipe é de <b>03 a 05 dias úteis</b> após o recebimento dos seus documentos.</li></ul>'),
   topics:[
-    {n:'01',title:T('Trip information form','Formulário de informações da Trip'),form:'visa',text:T('Fill in the form very carefully, with all the information requested. Answers must be true and consistent with previous applications and visas.','Preencha o formulário com muita atenção e com todas as informações solicitadas. As informações devem ser verdadeiras e consistentes com aplicações e vistos anteriores.')},
-    {n:'02',title:T('GS / Genuine Student','GS / Genuine Student'),form:'gs',text:T('One of the central documents of the application: answer every question with true, detailed information.','Um dos documentos centrais da aplicação: responda todas as perguntas com informações verdadeiras e detalhadas.')},
-    {n:'03',title:T('Form 956','Form 956'),text:T('Use the form provided by Trip and fill in the fields indicated by the agency. The signature can be electronic (e.g. Adobe Fill & Sign).','Utilize o formulário fornecido pela Trip e preencha os campos indicados pela agência. A assinatura pode ser eletrônica (ex.: Adobe Fill & Sign).'),
-      items:[I('form956','Form 956','Form 956 – Appointment of a registered migration agent',{req:true})]},
-    {n:'04',title:T('Financial evidence','Comprovação financeira'),text:T('If financial evidence is presented. Reference value: 12 months of living costs (AUD 29,710) + 1 year of the course not yet paid.','Caso seja apresentada comprovação financeira. Valor de referência: 12 meses de living costs (AUD 29.710) + o valor de 1 ano do curso que ainda não tenha sido pago.'),
+    {n:'01',title:T('Trip information form','Formulário de informações da Trip'),form:'visa',
+      text:T('Fill it in very carefully, with all the information requested, at a moment when you have time. Please be honest: immigration may compare it with your previous visas.','Preencha com muita atenção e com todas as informações solicitadas, num momento em que você tenha tempo. Por favor, seja honesto: a imigração pode comparar com seus vistos anteriores.')},
+    {n:'02',title:T('GS / Genuine Student','GS / Genuine Student Letter'),form:'gs',
+      text:T('This is the most important document of your visa application, so take your time with it! It helps Trip Study prepare your letter to immigration, and we will send it to you to review and approve before applying. If it helps, you can answer in Portuguese.','Esse é o documento mais importante da sua aplicação de visto, portanto dedique-se a ele! Ele ajuda a Trip Study a preparar a sua carta para a imigração, e enviaremos para você analisar e dar o ok final antes de aplicarmos. Se achar melhor, pode responder em português para expor todos os seus pensamentos.')},
+    {n:'03',title:T('Form 956','Form 956'),
+      text:T('With this form you authorise Trip Study to apply for your visa. It is already filled in with Trip\'s details; you only need to fill in the fields below.','Nesse formulário você autoriza a Trip Study a aplicar o seu visto. Ele já está preenchido com os dados da Trip; você só precisa preencher os campos abaixo.'),
+      items:[I('form956','Form 956','Form 956 – signed',{tpl:TPL('form-956.pdf','Baixar o Form 956','Download Form 956'),
+        guide:T('<b>Fields to fill in:</b><ul><li><b>Field 4</b> – your <b>title</b> (MISS – single woman under 30, MS – single woman over 30, MRS – married woman, MR – man, single or married) and your <b>surname and given names</b>.</li><li><b>Field 5</b> – <b>date of birth</b>.</li><li><b>Field 7</b> – <b>residential address in Australia</b>.</li><li><b>Field 9</b> – <b>mobile number</b>.</li><li><b>Field 28</b> – write the <b>date</b> below our signature.</li><li><b>Field 29</b> – <b>sign</b> (an electronic signature is fine) and write the <b>date</b>.</li></ul>You can use the <b>Adobe Fill & Sign</b> app on your phone to fill in and sign the form.',
+                '<b>Campos que você precisa preencher:</b><ul><li><b>Campo 4</b> – o seu <b>título</b> (MISS – mulher solteira abaixo de 30 anos, MS – mulher solteira acima de 30 anos, MRS – mulher casada, MR – homem solteiro ou casado) e o seu <b>sobrenome e nome</b>.</li><li><b>Campo 5</b> – <b>data de nascimento</b>.</li><li><b>Campo 7</b> – <b>endereço residencial na Austrália</b>.</li><li><b>Campo 9</b> – <b>número do celular</b>.</li><li><b>Campo 28</b> – colocar a <b>data</b> abaixo da nossa assinatura.</li><li><b>Campo 29</b> – <b>assinar</b> (pode ser assinatura eletrônica) e colocar a <b>data</b>.</li></ul>Você pode usar o app de celular <b>Adobe Fill & Sign</b> para preencher os campos e assinar digitalmente o formulário.')})]},
+    {n:'04',title:T('Financial evidence','Comprovação financeira'),
+      text:T('Financial evidence is not mandatory at the moment, but immigration asks for this information in the application (who would provide the funds, which bank, etc.). Even so, we encourage students who have access to these funds to include it: it makes your application stronger and safer and can avoid questions from immigration. Your reference value: 12 months of living costs (AUD 29,710) + the full amount of 1 year of your course not yet paid.',
+              'Atualmente não somos obrigados a incluir a comprovação financeira, porém a imigração tem campos obrigatórios que solicitam essa informação (por exemplo, quem vai fazer a comprovação e qual o banco). Mesmo assim, nós incentivamos que os estudantes que tenham acesso a esses valores façam: isso deixa a sua aplicação mais forte e segura e pode evitar questionamentos da imigração. No seu caso seria: 12 meses de living costs (AUD 29.710) + o valor total referente a 1 ano do seu curso que ainda não foi pago.'),
       items:[I('bank','Extratos bancários','Bank statements (full, last 3 months)',{help:T('Full statements for the last 3 months.','Completos, dos 3 últimos meses.')}),
         I('income','Comprovantes de renda','Proof of income (last 3 months)',{help:T('Last 3 months.','Dos 3 últimos meses.')}),
         I('tax','Declaração do Imposto de Renda','Full income tax return with receipt',{help:T('Complete return with the filing receipt.','Declaração completa, com o recibo de entrega.')}),
-        I('support','Declaração de suporte financeiro','Financial support declaration',{help:T('If someone is supporting you.','Caso alguém seja seu suporte financeiro.')}),
+        I('support','Declaração de suporte financeiro','Financial support statement',{help:T('If someone is supporting you financially. Download the template, fill it in and have it signed.','Caso alguém seja seu suporte financeiro. Baixe o modelo, preencha e peça para a pessoa assinar.'),tpl:TPL('modelo-declaracao-suporte-financeiro.docx','Baixar modelo da declaração','Download statement template')}),
         I('support_id','RG ou passaporte do suporte financeiro','ID or passport of the financial supporter'),
         I('sponsor_rel','Comprovante de relacionamento com o patrocinador','Proof of relationship with the sponsor',{help:T('If the sponsor is not a first-degree relative.','Caso não seja parente de primeiro grau.')})]},
-    {n:'05',title:T('Job offer letter in Brazil','Carta de oferta de trabalho no Brasil'),text:T('The letter must be true and consistent with your professional situation. When applicable it can include: company name and full address, CNPJ, position offered, area, main responsibilities, salary, expected start date, name and position of the person responsible, signature and contact details.','A carta deve ser verdadeira e compatível com a sua situação profissional. Quando aplicável, pode apresentar: nome da empresa e endereço completo, CNPJ, cargo/função oferecida, área de atuação, principais responsabilidades, remuneração, previsão de início, nome e cargo do responsável pela empresa, assinatura e dados de contato.'),
-      items:[I('job_offer','Carta de oferta de trabalho no Brasil','Job offer letter in Brazil')]},
-    {n:'06',title:T('Professional documents from Brazil','Documentos profissionais do Brasil'),
+    {n:'05',title:T('Job offer letter (company in Brazil)','Carta de oferta de trabalho (empresa do Brasil)'),
+      text:T('A job offer letter from a company based in Brazil can make a big difference to your student visa application, because it shows your ties to Brazil and strengthens your return after the course. If you can get one, let us know: we send a personalised template for your situation, considering the company\'s field, the position, possible financial gains and other aspects. The letter must be true and consistent with your professional situation.',
+              'A carta de oferta de trabalho de uma empresa sediada no Brasil pode ser um grande diferencial na sua aplicação para o visto de estudante, pois é uma forma de demonstrar vínculos com o Brasil, fortalecendo o seu retorno ao país após a conclusão do curso. Caso você tenha condições de fornecer esse tipo de documento, nos avise: enviamos um modelo personalizado para a sua situação, levando em consideração a área de atuação da empresa, a posição que você ocuparia, possíveis ganhos financeiros, entre outros aspectos. A carta deve ser verdadeira e compatível com a sua situação profissional.'),
+      items:[I('job_offer','Carta de oferta de trabalho no Brasil','Job offer letter in Brazil',{tpl:TPL('modelo-carta-oferta-trabalho-brasil.docx','Baixar modelo da carta','Download letter template')})]},
+    {n:'06',title:T('Professional documents (Brazil and Australia)','Documentos profissionais (Brasil e Austrália)'),
+      text:T('Recommended to strengthen your profile with immigration (original and NAATI translation).','Recomendados para reforçar ainda mais o seu perfil perante a imigração australiana (original e tradução NAATI).'),
       items:[I('ctps','Carteira de Trabalho ou Contratos de Trabalho','Work card (CTPS) or employment contracts',{help:T('We recommend sending the digital CLT.','Recomendamos enviar a CLT digital.')}),
-        I('reference','Carta de recomendação ou Declaração de empregador','Reference letter or employer declaration'),
+        I('reference','Carta de recomendação ou Declaração de empregador','Reference letter or employer declaration (Brazil)'),
+        I('reference_au','Carta de referência de emprego na Austrália','Employment reference letter (Australia)',{help:T('For jobs in Australia. Download the template and ask your employer to fill it in on the company letterhead and sign it.','Para os trabalhos na Austrália. Baixe o modelo e peça para o seu empregador preencher no papel timbrado da empresa e assinar.'),tpl:TPL('modelo-carta-referencia-emprego-australia.docx','Baixar modelo da carta','Download letter template')}),
         I('prof_other','Outros documentos de experiência profissional','Other documents showing work experience')]},
     {n:'07',title:T('Company / CNPJ / MEI','Empresa / CNPJ / MEI'),text:T('For those who own a company or business activity in Brazil.','Para quem possui empresa ou atividade empresarial no Brasil.'),
       items:[I('cnpj','Cartão CNPJ','CNPJ registration card'),I('mei','Certificado de MEI','MEI certificate'),I('social_contract','Contrato Social','Articles of association (Contrato Social)'),
         I('contract_changes','Alterações contratuais','Contract amendments'),I('company_activity','Comprovantes de atividade da empresa','Proof of company activity'),
         I('shareholding','Participação societária','Documents showing shareholding'),I('company_other','Outros documentos empresariais','Other relevant business documents')]},
-    {n:'08',title:T('Academic qualifications in Brazil','Formação acadêmica no Brasil'),text:T('Diplomas/certificates of the courses mentioned or relevant to the application.','Diplomas/certificados dos cursos mencionados ou relevantes para a aplicação.'),
+    {n:'08',title:T('Academic qualifications in Brazil','Formação acadêmica no Brasil'),text:T('Diplomas/certificates of the courses mentioned in the application (university, technical, short courses, high school, etc.).','Diplomas/certificados dos cursos mencionados na aplicação (faculdade, cursos técnicos, cursos de curta duração, ensino médio etc.).'),
       items:[I('postgrad','Diploma de pós-graduação','Postgraduate diploma'),I('degree','Diploma de graduação','Bachelor degree diploma'),I('technical','Diploma de curso técnico','Technical course diploma'),
         I('high_school','Certificado do ensino médio','High school certificate'),I('enrolment','Atestados de matrícula ou trancamento','Enrolment or deferral certificates')]},
     {n:'09',title:T('Studies in Australia','Estudos realizados na Austrália'),
       items:[I('au_certs','Certificados dos cursos na Austrália','Certificates of all courses completed in Australia')]},
-    {n:'10',title:T('Assets in Brazil','Comprovação de bens no Brasil'),text:T('If you own assets in your name in Brazil.','Caso você possua bens em seu nome no Brasil.'),
+    {n:'10',title:T('Assets in Brazil','Comprovação de bens no Brasil'),text:T('If you own assets in your name in Brazil and want to show them, it is good to include them in the application.','Se tiver bens no seu nome no Brasil e quiser apresentar comprovação deles, também é bacana incluirmos na aplicação.'),
       items:[I('property','Escritura de imóvel','Property deed'),I('purchase','Contrato de compra e venda','Purchase and sale agreement'),I('vehicle','Documento de veículo','Vehicle registration')]},
     {n:'11',title:T('Identity documents','Documentos de identidade'),
-      items:[I('passport','Passaporte atual - página de identificação','Current passport – identification page',{req:true})]},
-    {n:'12',title:T('Translations','Traduções'),text:T('Required for every document in a language other than English, by a NAATI-accredited translator.','Exigida para cada documento apresentado em idioma diferente do inglês, por tradutor acreditado pela NAATI.'),
-      items:[I('translations','Traduções NAATI','NAATI translations')]}
+      items:[I('passport','Passaporte atual - página de identificação','Current passport – identification page')]},
+    {n:'12',title:T('Translations','Traduções'),
+      text:T('Every document in a language other than English must be translated by a NAATI translator (Australia) or a sworn translator (Brazil), the format required by immigration for onshore applications.','Todo documento em idioma diferente do inglês deve ser traduzido por um tradutor NAATI (Austrália) ou um tradutor juramentado (Brasil), que é o modelo de tradução solicitado pela imigração australiana para os processos onshore.'),
+      items:[I('translations','Traduções NAATI','NAATI translations',{
+        guide:T('<b>Suggestion: Aussie Translate (Trip Study partner) – 10% off with the coupon <span style="white-space:nowrap">TGDC10</span></b><ol><li>Open the partner link: <a href="https://www.aussietranslate.com.au/partners/tripstudy-gold-coast" target="_blank" rel="noopener">aussietranslate.com.au/partners/tripstudy-gold-coast</a></li><li>Fill in the first page: Translate from <b>Portuguese</b> · To <b>English</b> · Translation type <b>For use in Australia (Immigration Purpose)</b> · Subtype <b>NAATI Certification</b> · your name, email and phone.</li><li>Upload the document to be translated.</li><li>Click <b>"Instant Quote"</b> and choose the deadline and price.</li><li>Click <b>"I have a coupon"</b>, type <b>TGDC10</b> and click <b>"Apply"</b>.</li><li>Create a password and finish with <b>"Proceed to Payment"</b>.</li></ol>You can choose any other company that offers this kind of translation.',
+                '<b>Sugestão: Aussie Translate (parceira da Trip Study) – 10% de desconto com o cupom <span style="white-space:nowrap">TGDC10</span></b><ol><li>Acesse o link da parceria: <a href="https://www.aussietranslate.com.au/partners/tripstudy-gold-coast" target="_blank" rel="noopener">aussietranslate.com.au/partners/tripstudy-gold-coast</a></li><li>Preencha a primeira página: Translate from <b>Portuguese</b> · To <b>English</b> · Translation type <b>For use in Australia (Immigration Purpose)</b> · Subtype of translation <b>NAATI Certification</b> · seu nome, email e telefone.</li><li>Faça o upload do documento a ser traduzido.</li><li>Clique em <b>"Instant Quote"</b> e escolha o prazo e o valor.</li><li>Clique em <b>"I have a coupon"</b>, digite <b>TGDC10</b> e clique em <b>"Apply"</b>.</li><li>Crie uma senha e finalize clicando em <b>"Proceed to Payment"</b>.</li></ol>Embora essa seja uma empresa parceira da Trip, você pode escolher qualquer empresa do mercado que ofereça esse tipo de tradução.')})]}
   ]
 };
 const DS={
@@ -918,7 +935,7 @@ const DS={
   start:T('Start','Começar'),starting:T('Opening…','Abrindo…'),
   exists:T('You already have a checklist. We sent your personal link to {e}. Open it from your inbox to continue.','Você já tem um checklist. Mandamos o seu link pessoal para {e}. Abra pelo seu email para continuar.'),
   hello:T('Hello, {n}!','Olá, {n}!'),
-  summary:T('{a} documents uploaded · required: {r} of {t}','{a} documentos anexados · obrigatórios: {r} de {t}'),
+  summary:T('{a} documents uploaded','{a} documentos anexados'),
   required:T('Required','Obrigatório'),ifApplies:T('If applicable','Se aplicável'),
   attach:T('Attach','Anexar'),attachMore:T('Attach another','Anexar outro'),
   formSent:T('Sent on {d}','Enviado em {d}'),formPending:T('Not sent yet','Ainda não enviado'),openForm:T('Open form','Abrir formulário'),
@@ -932,7 +949,12 @@ const DS={
   fail:T('Something went wrong. Check your internet and try again.','Algo deu errado. Verifique sua internet e tente de novo.'),
   tooBig:T('"{f}" is larger than 20 MB. Send a smaller file.','"{f}" tem mais de 20 MB. Envie um arquivo menor.'),
   uploading:T('Uploading {f}…','Enviando {f}…'),
-  done:T('uploaded','anexado')
+  done:T('uploaded','anexado'),
+  pdfOnly:T('"{f}" is not a PDF. Please send documents in PDF format only.','"{f}" não é PDF. Envie os documentos somente em formato PDF.'),
+  sending:T('Sending…','Enviando…'),
+  linkSentTo:T('Done! We sent your personal link to {e}. Check your inbox (and spam).','Pronto! Mandamos o seu link pessoal para {e}. Confira sua caixa de entrada (e o spam).'),
+  myLinkHelp:T('Your personal link reopens this checklist on any device.','O link pessoal abre este checklist de novo em qualquer aparelho.'),
+  pdfNote:T('PDF only · up to 20 MB','Somente PDF · até 20 MB')
 };
 const DOC_MAX=20*1024*1024;
 let D=null, dUp={}, DKEY='tripstudy_docs';
@@ -964,6 +986,7 @@ function docsRender(){
   const chips=h('div',{class:'steps'}); DOCS.topics.forEach(t=>{ const ok=t.form?!!D.forms[t.form]:(t.items||[]).some(i=>(D.items[i.k]||[]).length);
     chips.append(h('button',{type:'button',class:ok?'done':'',onclick:()=>document.getElementById('t'+t.n).scrollIntoView({behavior:'smooth',block:'start'})},`${ok?'✓ ':''}${t.n}. ${tr(t.title)}`)); });
   top.append(chips); $app.append(top);
+  $app.append(h('div',{class:'info',html:tr(DOCS.notice)}));
   DOCS.topics.forEach(t=>$app.append(docsTopic(t)));
   $app.append(h('p',{class:'lead',style:'margin-top:18px',text:tr(DS.remember)}));
   docsNav(); window.scrollTo(0,y);
@@ -994,14 +1017,16 @@ function docsTopic(t){
     return card; }
   t.items.forEach((it,ix)=>{ const files=(D.items&&D.items[it.k])||[]; const id='up_'+it.k;
     const box=h('div',{class:'q'+(ix?'':' first')});
-    box.append(h('span',{class:'lbl'},files.length?'✓ ':'',tr(it.label),h('span',{class:'opt-tag'},'('+tr(it.req?DS.required:DS.ifApplies)+')')));
+    box.append(h('span',{class:'lbl'},files.length?'✓ ':'',tr(it.label),it.req?h('span',{class:'opt-tag'},'('+tr(DS.required)+')'):null));
     if(it.help) box.append(h('p',{class:'help',text:tr(it.help)}));
+    if(it.tpl) box.append(h('a',{class:'btn ink',href:it.tpl.href,download:'',style:'justify-self:start;text-decoration:none;margin-top:4px'},'⬇ '+tr(it.tpl.label)));
+    if(it.guide) box.append(h('div',{class:'info',style:'margin-top:4px',html:tr(it.guide)}));
     const row=h('div',{class:'file'});
     files.forEach(f=>row.append(h('span',{class:'chip'},h('span',{title:f.name},'📎 '+f.name),h('button',{type:'button','aria-label':tr(S.remove)+' '+f.name,onclick:()=>docsRemove(f)},'×'))));
-    const input=h('input',{type:'file',id,class:'sr',multiple:true,accept:'image/*,.pdf,.doc,.docx,.xls,.xlsx,.heic',onchange:e=>{const fl=[...(e.target.files||[])]; e.target.value=''; if(fl.length) docsUpload(it,fl);}});
+    const input=h('input',{type:'file',id,class:'sr',multiple:true,accept:'application/pdf,.pdf',onchange:e=>{const fl=[...(e.target.files||[])]; e.target.value=''; if(fl.length) docsUpload(it,fl);}});
     if(dUp[it.k]) row.append(h('span',{class:'note',text:dUp[it.k]}));
     else row.append(h('label',{class:'btn soft',for:id,tabindex:'0',onkeydown:e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click();}}},files.length?tr(DS.attachMore):tr(DS.attach)));
-    row.append(input); box.append(row);
+    row.append(input); box.append(row); box.append(h('div',{class:'note',text:tr(DS.pdfNote)}));
     card.append(box); });
   return card;
 }
@@ -1010,11 +1035,12 @@ function docsNav(){
   const pend=D.pending||0; const busy=Object.keys(dUp).length>0;
   $nav.append(h('div',{class:'in'},
     h('span',{class:'grow',text:pend?'':(Object.keys(D.items||{}).length?tr(DS.allNotified):'')}),
-    h('button',{class:'btn ghost',type:'button',onclick:docsMyLink},tr(DS.myLink)),
-    h('button',{class:'btn white',type:'button',disabled:!pend||busy,onclick:docsNotify},pend?fmt(DS.notifyN,{n:pend}):tr(DS.notify))));
+    h('button',{class:'btn ghost',type:'button',id:'d_link',title:tr(DS.myLinkHelp),onclick:docsMyLink},tr(DS.myLink)),
+    h('button',{class:'btn white',type:'button',id:'d_notify',disabled:!pend||busy,onclick:docsNotify},pend?fmt(DS.notifyN,{n:pend}):tr(DS.notify))));
 }
 async function docsUpload(it,files){
   for(const file of files){
+    if(!(/pdf/i.test(file.type)||/\.pdf$/i.test(file.name))){ toast(fmt(DS.pdfOnly,{f:file.name})); continue; }
     if(file.size>DOC_MAX){ toast(fmt(DS.tooBig,{f:file.name})); continue; }
     dUp[it.k]=fmt(DS.uploading,{f:file.name}); docsRender();
     try{
@@ -1032,14 +1058,18 @@ function docsRemove(f){
         else D=JSON.parse(await call('docsRemove',D.id,f.id)); }catch(e){ toast(tr(DS.fail)); }
       docsRender(); }},tr(S.remove)))); });
 }
+const busyBtn=(id,on)=>{ const b=document.getElementById(id); if(!b) return; if(on){ b.dataset.t=b.textContent; b.textContent=tr(DS.sending); b.disabled=true; } else { b.textContent=b.dataset.t||b.textContent; b.disabled=false; } };
 async function docsNotify(){
+  busyBtn('d_notify',true);
   if(!LIVE){ D.pending=0; rememberDocs(); toast(tr(DS.notified)); docsRender(); return; }
   try{ D=JSON.parse(await call('docsNotify',D.id,st.lang)); toast(tr(DS.notified)); }catch(e){ toast(tr(DS.fail)); }
   docsRender();
 }
 async function docsMyLink(){
   if(!LIVE){ toast(tr(S.previewLink)); return; }
-  try{ await call('docsEmailLink',D.id,st.lang); toast(tr(DS.linkSent)); }catch(e){ toast(tr(DS.fail)); }
+  busyBtn('d_link',true);
+  try{ await call('docsEmailLink',D.id,st.lang); toast(fmt(DS.linkSentTo,{e:D.email})); }catch(e){ toast(tr(DS.fail)); }
+  busyBtn('d_link',false);
 }
 
 function chooser(){
