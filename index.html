@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trip Study</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+<style>
+/* Trip Study palette, taken from the original Formstack form: orange page, coral card, dark-brown ink, white fields */
+:root{
+  --page:#DA6828; --page-deep:#C45A1F; --card:#EC8B65; --ink:#35170F; --ink-soft:#5E2B19;
+  --paper:#FFFFFF; --blush:#FFDCCE; --line:rgba(53,23,15,.16); --accent:#DA4F28;
+  --err:#8A1607; --ok:#1E6A3B;
+  --font:Lato,"Helvetica Neue",Arial,"Lucida Grande",sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45}
+.wrap{max-width:780px;margin:0 auto;padding-inline:16px;padding-block:20px 140px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{color:#fff;font-weight:900;letter-spacing:.22em;font-size:13px;text-transform:uppercase}
+.brand span{opacity:.75;font-weight:700;letter-spacing:.14em}
+.lang{display:inline-flex;background:rgba(255,255,255,.18);border-radius:999px;padding:3px}
+.lang button{font:inherit;font-size:13px;font-weight:700;border:0;background:transparent;color:#fff;padding:6px 14px;border-radius:999px;cursor:pointer}
+.lang button[aria-pressed="true"]{background:#fff;color:var(--accent)}
+h1{color:#fff;font-weight:900;font-size:clamp(26px,5.4vw,38px);line-height:1.1;margin:22px 0 6px;text-wrap:balance}
+.lead{color:var(--blush);margin:0 0 18px;max-width:62ch}
+.preview{background:var(--ink);color:#fff;border-radius:10px;padding:10px 14px;font-size:14px;margin-top:14px}
+.progress{margin:6px 0 12px}
+.progress .meta{display:flex;justify-content:space-between;color:#fff;font-size:14px;font-weight:700;margin-bottom:6px;gap:12px}
+.progress .meta span:last-child{font-weight:400;color:var(--blush);text-align:right}
+.bar{height:6px;background:rgba(255,255,255,.3);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:#fff;border-radius:99px;transition:width .3s}
+.steps{display:flex;gap:6px;overflow-x:auto;padding:10px 0 4px;scrollbar-width:none}
+.steps::-webkit-scrollbar{display:none}
+.steps button{flex:0 0 auto;font:inherit;font-size:13px;border:1.5px solid rgba(255,255,255,.45);background:transparent;color:#fff;border-radius:999px;padding:5px 12px;cursor:pointer;white-space:nowrap}
+.steps button[disabled]{opacity:.45;cursor:default}
+.steps button.done{background:rgba(255,255,255,.2)}
+.steps button.cur{background:#fff;color:var(--accent);border-color:#fff;font-weight:700}
+.card{background:var(--card);border-radius:16px;padding:26px clamp(16px,4.5vw,38px) 30px;box-shadow:0 14px 34px rgba(53,23,15,.22);margin-top:10px}
+.card h2{margin:0 0 4px;font-size:clamp(21px,3.6vw,26px);font-weight:900;text-wrap:balance}
+.card .intro{margin:0 0 6px;color:var(--ink-soft)}
+.q{display:grid;gap:8px;padding-block:18px;border-top:1px solid var(--line);min-width:0}
+.q.first{border-top:0}
+.q.sub{border-top:0;padding-top:0;margin-left:clamp(0px,3vw,22px)}
+.lbl{font-weight:700;font-size:16.5px;display:block}
+.lbl .n{color:var(--ink-soft);font-variant-numeric:tabular-nums;margin-right:4px}
+.lbl .req{color:var(--err);margin-left:2px}
+.lbl .opt-tag{font-weight:400;font-size:13px;color:var(--ink-soft);margin-left:6px}
+.help{font-size:14.5px;color:var(--ink-soft);margin:0;max-width:66ch}
+input[type=text],input[type=email],input[type=tel],textarea,select{font:inherit;font-size:16px;color:var(--ink);background:var(--paper);border:1.5px solid var(--paper);border-radius:9px;padding:11px 13px;width:100%;min-width:0}
+textarea{min-height:110px;resize:vertical;line-height:1.5}
+textarea.long{min-height:170px}
+input::placeholder,textarea::placeholder{color:#A88A80}
+input:focus,textarea:focus,select:focus{outline:3px solid rgba(255,255,255,.75);outline-offset:1px;border-color:var(--ink)}
+.q.bad input,.q.bad textarea,.q.bad select,.q.bad .opts label,.q.bad .sigbox{border-color:var(--err)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid2 .full{grid-column:1/-1}
+.mini{font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:3px;display:block}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opts.col{flex-direction:column;align-items:stretch}
+.opts label{position:relative;display:flex;align-items:center;gap:9px;background:var(--paper);border:1.5px solid var(--paper);border-radius:999px;padding:9px 16px;cursor:pointer;font-size:15.5px;line-height:1.3}
+.opts.col label{border-radius:10px}
+.opts input{position:absolute;opacity:0;pointer-events:none}
+.opts .dot{flex:0 0 auto;width:16px;height:16px;border-radius:50%;border:2px solid var(--ink-soft)}
+.opts.multi .dot{border-radius:4px}
+.opts label:has(input:checked){background:var(--ink);border-color:var(--ink);color:#fff}
+.opts label:has(input:checked) .dot{border-color:#fff;background:#fff;box-shadow:inset 0 0 0 3px var(--ink)}
+.opts label:has(input:focus-visible){outline:3px solid rgba(255,255,255,.85);outline-offset:2px}
+.err{justify-self:start;background:var(--paper);color:var(--err);font-size:13.5px;font-weight:700;padding:5px 10px;border-radius:6px}
+.info{background:var(--blush);border-radius:12px;padding:16px 18px;line-height:1.55;margin-top:14px}
+.info b{font-weight:900}
+.info ul{margin:8px 0 0;padding-left:20px}
+.group .item{background:rgba(255,255,255,.24);border-radius:12px;padding:6px 16px 10px;margin-top:10px}
+.group .item>.head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-top:10px}
+.group .item>.head strong{font-weight:900;font-size:15px;letter-spacing:.04em;text-transform:uppercase}
+.group .item .q{padding-block:12px}
+.group .item>.head+.q{border-top:0}
+.linkbtn{font:inherit;font-size:14px;background:none;border:0;color:var(--ink);text-decoration:underline;cursor:pointer;padding:4px}
+.add{font:inherit;font-weight:700;margin-top:12px;width:100%;padding:12px;border-radius:10px;border:2px dashed rgba(53,23,15,.4);background:transparent;color:var(--ink);cursor:pointer}
+.add:hover{background:rgba(255,255,255,.18)}
+.file{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{font:inherit;font-weight:700;font-size:15px;border-radius:9px;padding:11px 18px;cursor:pointer;border:2px solid transparent;line-height:1.2}
+.btn.white{background:var(--paper);color:var(--accent)}
+.btn.ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.7)}
+.btn.ink{background:var(--ink);color:#fff}
+.btn.soft{background:rgba(255,255,255,.35);color:var(--ink)}
+.btn:disabled{opacity:.55;cursor:default}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--paper);border-radius:999px;padding:6px 8px 6px 12px;font-size:14px;max-width:100%}
+.chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.chip button{border:0;background:var(--blush);border-radius:50%;width:22px;height:22px;cursor:pointer;color:var(--ink);font-weight:900;flex:0 0 auto}
+.note{font-size:13.5px;color:var(--ink-soft)}
+.sigbox{background:var(--paper);border:1.5px solid var(--paper);border-radius:10px;position:relative}
+.sigbox canvas{display:block;width:100%;height:190px;touch-action:none;cursor:crosshair}
+.sigbox .line{position:absolute;left:18px;right:18px;bottom:42px;border-bottom:1.5px dashed #C9A89B;pointer-events:none}
+.review section{border-top:1px solid var(--line);padding-block:14px}
+.review section:first-child{border-top:0}
+.review .rh{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.review h3{margin:0;font-size:17px;font-weight:900}
+.review dl{margin:8px 0 0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:6px 14px;font-size:14.5px}
+.review dt{color:var(--ink-soft)}
+.review dd{margin:0;font-weight:700;overflow-wrap:anywhere;white-space:pre-wrap}
+.review dd.empty{font-weight:400;font-style:italic;opacity:.7}
+.nav{position:fixed;left:0;right:0;bottom:0;background:var(--page-deep);box-shadow:0 -8px 24px rgba(53,23,15,.25);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));z-index:5}
+.nav .in{max-width:780px;margin:0 auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.nav .grow{flex:1 1 auto;min-width:0;color:var(--blush);font-size:13px}
+.status::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--blush);margin-right:6px;vertical-align:1px}
+.status.ok::before{background:#9BE3B4}
+.status.bad::before{background:#FFB4A6}
+.foot{display:flex;justify-content:center;gap:16px;margin-top:18px;flex-wrap:wrap}
+.foot .linkbtn{color:#fff}
+.overlay{position:fixed;inset:0;background:rgba(53,23,15,.55);display:grid;place-items:center;padding:16px;z-index:10}
+.modal{background:var(--paper);border-radius:16px;max-width:480px;width:100%;padding:24px;display:grid;gap:12px;max-height:90vh;overflow:auto}
+.modal h3{margin:0;font-size:20px;font-weight:900}
+.modal p{margin:0;color:var(--ink-soft)}
+.modal input{border-color:#E4CFC6}
+.modal .row{display:flex;gap:8px;flex-wrap:wrap}
+.modal .row input{flex:1 1 200px}
+.modal .acts{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.modal .btn.white{border-color:#E4CFC6}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(86px + env(safe-area-inset-bottom,0px));background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:20;max-width:calc(100% - 32px);box-shadow:0 8px 20px rgba(0,0,0,.25)}
+.done-screen{text-align:center;padding-block:30px}
+.done-screen .big{font-size:46px;line-height:1}
+.done-screen h2{margin:12px 0 8px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (max-width:560px){
+  .grid2{grid-template-columns:1fr}
+  .review dl{grid-template-columns:1fr;gap:2px}
+  .review dd{margin-bottom:8px}
+  .nav .grow{order:3;flex-basis:100%}
+  .nav .btn{flex:1 1 auto}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="nav" id="nav" hidden></div>
+<script>
+(function(){
+'use strict';
+
+/* ================================================================
+   1. CONTENT — the two forms, in English and Portuguese
+   ================================================================ */
+const T=(en,pt)=>({en,pt});
+const O=(v,pt,en)=>({v,en:en||v,pt});
+const YN=[O('Yes','Sim'),O('No','Não')];
+const SEX=[O('Female','Feminino'),O('Male','Masculino'),O('Other','Outro')];
+const PH_DATE=T('DD/MM/YYYY','DD/MM/AAAA');
+const PH_MONTH=T('MM/YYYY','MM/AAAA');
+const H_AUTH=T('You find this on the lower right of your passport data page (usually an acronym).','Você encontra essa informação no campo inferior direito do seu passaporte (normalmente é uma sigla).');
+const H_OTHERNAME=T('E.g. a married name, or a name that was legally changed.','Ex.: já teve um nome de casado(a) ou precisou retificar o nome.');
+const H_COE=T('You can find this on your CoE.','Você encontra essa informação nos seus CoEs.');
+const DETAILS=T('Give details','Dê os detalhes');
+const yn=(id,label,help,extra)=>Object.assign({id,type:'radio',options:YN,required:true,label,help},extra||{});
+const ynd=(id,label,help)=>[yn(id,label,help),{id:id+'_details',type:'textarea',required:true,sub:true,label:DETAILS,showIf:{f:id,in:['Yes']}}];
+const FAMILY_REL=[O('Mother','Mãe'),O('Father','Pai'),O('Brother','Irmão'),O('Sister','Irmã'),O('Step-mother','Madrasta'),O('Step-father','Padrasto'),O('Step-brother','Meio-irmão / irmão por parte de padrasto/madrasta'),O('Step-sister','Meia-irmã / irmã por parte de padrasto/madrasta'),O('Brother-in-law','Cunhado'),O('Sister-in-law','Cunhada'),O('Mother-in-law','Sogra'),O('Father-in-law','Sogro')];
+
+const FORMS={
+visa:{
+  title:T('Visa Form Application','Formulário de Aplicação de Visto'),
+  lead:T('Fill in the details for your Australian visa application. Your answers are saved automatically as you type, so you can stop and come back later.','Preencha os dados para a sua aplicação de visto australiano. Suas respostas são salvas automaticamente enquanto você digita, então você pode parar e continuar depois.'),
+  meta:{name:'full_name',email:'email',phone:'au_phone'},
+  steps:[
+  {id:'personal',title:T('Personal details','Dados pessoais'),fields:[
+    {id:'current_location',type:'text',required:true,label:T("Applicant's current location (country)",'País onde você mora agora'),help:T('The country you are living in at the time of this visa application.','Em que país você está morando no momento da aplicação deste visto?'),ph:T('E.g.: Australia','Ex.: Austrália')},
+    {id:'full_name',type:'name',required:true,label:T('Full name (as in your passport)','Nome completo (como no passaporte)')},
+    {id:'sex',type:'radio',required:true,options:SEX,label:T('Sex','Sexo')},
+    {id:'dob',type:'date',required:true,label:T('Date of birth','Data de nascimento')},
+    {id:'cpf',type:'text',mask:'digits',maxlength:11,required:true,inputmode:'numeric',label:T('CPF (Brazilian tax number)','CPF'),help:T('Numbers only, with no spaces, dots or dashes.','Somente números, sem espaço, ponto ou traço.'),ph:'00000000000'},
+    {id:'birth_city',type:'text',required:true,label:T('Place of birth: town/city','Cidade de nascimento')},
+    {id:'birth_state',type:'text',required:true,label:T('Place of birth: province/state','Estado de nascimento')},
+    {id:'birth_country',type:'text',required:true,label:T('Place of birth: country','País de nascimento'),ph:T('E.g.: Brazil','Ex.: Brasil')},
+    {id:'relationship',type:'radio',required:true,col:true,label:T('Relationship status','Estado civil / relacionamento'),options:[O('Never Married','Nunca fui casado(a)'),O('In a De Facto Relationship','União estável (de facto)'),O('Married','Casado(a)'),O('Engaged','Noivo(a)'),O('Divorced','Divorciado(a)'),O('Separated','Separado(a)'),O('Widow/Widower','Viúvo(a)')]},
+    yn('other_names',T('Is the applicant currently, or have they ever been, known by any other names?','Você tem ou já teve algum outro nome?'),H_OTHERNAME),
+    {id:'other_names_details',type:'textarea',required:true,sub:true,label:T('Which name(s)? Give details','Qual(is) nome(s)? Dê os detalhes'),showIf:{f:'other_names',in:['Yes']}}
+  ]},
+  {id:'passport',title:T('Passport','Passaporte'),fields:[
+    {id:'passport_number',type:'text',required:true,label:T('Passport number','Número do passaporte')},
+    {id:'passport_country',type:'text',required:true,label:T('Country of passport','País do passaporte')},
+    {id:'nationality',type:'text',required:true,label:T('Nationality of passport holder','Nacionalidade do titular')},
+    {id:'passport_issue',type:'date',required:true,label:T('Date of issue','Data de emissão')},
+    {id:'passport_expiry',type:'date',required:true,label:T('Date of expiry','Data de validade')},
+    {id:'passport_authority',type:'text',required:true,label:T('Issuing authority','Autoridade emissora'),help:H_AUTH,ph:'Ex.: DPF/UDI/MG'},
+    yn('other_passport',T('Does the applicant hold a current passport from any other country?','Você possui passaporte de alguma outra nacionalidade?')),
+    {id:'other_passport_file',type:'file',required:true,sub:true,label:T('Attach the other passport','Anexe o outro passaporte'),showIf:{f:'other_passport',in:['Yes']}},
+    {id:'health_exam',type:'month',allow:['never','nunca'],required:true,label:T('When did you last undertake a health examination for an Australian visa?','Quando foi a última vez que você fez o exame médico para visto australiano?'),ph:T('MM/YYYY or "Never"','MM/AAAA ou "Nunca"')}
+  ]},
+  {id:'applying_family',title:T('Family in this application','Família nesta aplicação'),fields:[
+    yn('accompanying',T('Are there any accompanying members of the family unit included in this application?','Há familiares aplicando junto com você neste visto?'),T('If you are applying for a couple or family visa, the answer is YES.','Se você está aplicando para visto de casal ou família, a resposta é SIM.')),
+    {id:'accompanying_members',type:'group',min:1,max:6,showIf:{f:'accompanying',in:['Yes']},
+     label:T('Details of each accompanying member','Dados de cada familiar que aplica com você'),
+     item:T('Family member','Familiar'),add:T('Add another family member','Adicionar outro familiar'),fields:[
+      {id:'relation',type:'radio',required:true,label:T('Relationship to you','Parentesco com você'),options:[O('Spouse/Partner','Cônjuge / parceiro(a)'),O('Child','Filho(a)'),O('Step child','Enteado(a)')]},
+      {id:'name',type:'name',required:true,label:T('Full name','Nome completo')},
+      {id:'sex',type:'radio',required:true,options:SEX,label:T('Sex','Sexo')},
+      {id:'dob',type:'date',required:true,label:T('Date of birth','Data de nascimento')},
+      {id:'passport_file',type:'file',required:true,label:T('Passport copy','Cópia do passaporte'),help:T("Attach the family member's passport.",'Anexe o passaporte do familiar.')},
+      {id:'passport_number',type:'text',required:true,label:T('Passport number','Número do passaporte')},
+      {id:'passport_country',type:'text',required:true,label:T('Country of passport','País do passaporte')},
+      {id:'nationality',type:'text',required:true,label:T('Nationality of passport holder','Nacionalidade do titular')},
+      {id:'issue',type:'date',required:true,label:T('Date of issue','Data de emissão')},
+      {id:'expiry',type:'date',required:true,label:T('Date of expiry','Data de validade')},
+      {id:'authority',type:'text',required:true,label:T('Issuing authority','Autoridade emissora'),help:H_AUTH,ph:'Ex.: DPF/UDI/MG'},
+      {id:'birth_place',type:'text',required:true,label:T('Place of birth','Local de nascimento'),ph:T('Town/City – State – Country','Cidade – Estado – País')},
+      {id:'other_names',type:'text',label:T('Other names they have been known by (if any)','Outros nomes que já teve (se houver)'),help:H_OTHERNAME},
+      {id:'other_passport_file',type:'file',label:T('Passport from another country (if any)','Passaporte de outra nacionalidade (se houver)')},
+      {id:'health_exam',type:'month',allow:['never','nunca'],label:T('Last health examination for an Australian visa','Último exame médico para visto australiano'),ph:T('MM/YYYY or "Never"','MM/AAAA ou "Nunca"')}
+    ]}
+  ]},
+  {id:'contact',title:T('Addresses & contact','Endereços e contato'),fields:[
+    {id:'home_address',type:'address',required:true,label:T('Residential address in your home country','Endereço residencial no seu país de origem')},
+    {id:'au_address',type:'address',noCountry:true,required:true,label:T('Your address in Australia','Seu endereço na Austrália')},
+    {id:'au_phone',type:'tel',required:true,label:T('Australian phone number','Telefone australiano'),ph:'04XX XXX XXX'},
+    {id:'email',type:'email',required:true,label:T('Email','Email')}
+  ]},
+  {id:'other_family',title:T('Other family members','Outros familiares'),fields:[
+    {id:'non_acc',type:'checks',required:true,label:T('Non-accompanying members of the family unit','Familiares que NÃO estão aplicando com você'),
+     help:T('If you want to mention a partner or children in your application without them applying for this visa, select who.','Se você pretende apenas mencionar seu parceiro(a) ou filhos na aplicação (sem aplicar para visto de casal ou família), informe aqui.'),
+     options:[O('NO','Não tenho',"None"),O('Partner','Parceiro(a)'),O('Child','Filho(a)'),O('Step Child','Enteado(a)')],exclusive:'NO'},
+    {id:'non_acc_members',type:'group',min:1,max:6,showIf:{f:'non_acc',notIn:['NO']},
+     label:T('Details of each family member not applying','Dados de cada familiar que não aplica'),item:T('Family member','Familiar'),add:T('Add another','Adicionar outro'),fields:[
+      {id:'relation',type:'select',required:true,label:T('Relationship to you','Parentesco com você'),options:[O('Partner','Parceiro(a)'),O('Child','Filho(a)'),O('Step Child','Enteado(a)')]},
+      {id:'name',type:'name',required:true,label:T('Full name','Nome completo')},
+      {id:'dob',type:'date',required:true,label:T('Date of birth','Data de nascimento')},
+      {id:'birth_place',type:'text',required:true,label:T('Place of birth','Local de nascimento'),ph:T('Town/City – State – Country','Cidade – Estado – País')},
+      {id:'passport_file',type:'file',label:T('Passport copy','Cópia do passaporte')}
+    ]},
+    {id:'parents_siblings',type:'group',min:1,max:14,
+     label:T('Parents and siblings','Pais e irmãos'),
+     help:T('Add your parents and siblings who live OUTSIDE Australia. If you are applying with your partner, also add your parents-in-law and siblings-in-law, if any.','Coloque aqui os dados dos seus pais e irmãos que estão FORA da Austrália. Se você estiver aplicando com seu partner, coloque também os dados dos seus sogros e cunhados, se houver.'),
+     item:T('Family member','Familiar'),add:T('Add another family member','Adicionar outro familiar'),fields:[
+      {id:'relation',type:'select',required:true,label:T('Relationship','Parentesco'),options:FAMILY_REL},
+      {id:'name',type:'name',required:true,label:T('Full name','Nome completo')},
+      {id:'dob',type:'date',required:true,label:T('Date of birth','Data de nascimento')},
+      {id:'country',type:'text',required:true,label:T('Country of residence','País de residência')}
+    ]}
+  ]},
+  {id:'funds',title:T('Funding for stay','Recursos financeiros'),fields:[
+    {id:'funds_info',type:'info',html:T(
+      '<b>Funding for stay – financial support</b><br>12-month living cost:<ul><li>Student/guardian: AUD 29,710</li><li>With partner: plus AUD 10,394</li><li>With child: plus AUD 4,449</li></ul><p style="margin:8px 0 0">For a visa of more than 1 year: AUD 29,710 + the first year of the course (the part not yet paid) + the amounts for partner or child.</p>',
+      '<b>Recursos para a estadia – suporte financeiro</b><br>Custo de vida para 12 meses:<ul><li>Estudante/responsável: AUD 29.710</li><li>Com partner: mais AUD 10.394</li><li>Com filho(a): mais AUD 4.449</li></ul><p style="margin:8px 0 0">Para visto de mais de 1 ano a conta é: AUD 29.710 + o primeiro ano do curso (a parte que ainda não foi paga) + o valor do partner ou filho(a).</p>')},
+    yn('funds_confirm',T('Do all applicants confirm that they each have access to sufficient funds to support themselves for the total period of stay in Australia, and understand that further evidence of funds may be requested?','Você confirma que cada aplicante tem reserva financeira suficiente para todo o período na Austrália e que a imigração pode pedir comprovação?')),
+    {id:'funds_source',type:'text',required:true,label:T('Will the funds be provided by yourself or by someone else? If someone else, give their full name and relationship to you.','O suporte financeiro virá de você ou de outra pessoa? Se de outra pessoa, coloque o nome completo e o parentesco.'),help:T('E.g. father, mother, parents-in-law, grandparents.','Ex.: pai, mãe, sogro(a), avós etc.'),ph:T('E.g.: Myself, or Maria da Silva – mother','Ex.: De mim mesmo(a) ou Maria da Silva – mãe')},
+    {id:'funds_amount',type:'text',required:true,label:T('How much will you or your sponsor be able to show? (in Australian dollars)','Qual valor você ou seu patrocinador consegue comprovar? (em dólares australianos)'),help:T('Use the calculation explained above.','Coloque o valor da conta explicada acima.'),ph:'AUD'},
+    {id:'funds_bank',type:'text',required:true,label:T('Name of the bank','Nome do banco'),help:T('Bank where the funds are held.','Banco em que esses valores estão guardados.'),ph:'Ex.: Itaú, Bradesco, Commonwealth'}
+  ]},
+  {id:'education',title:T('Education','Formação'),fields:[
+    {id:'highest_level',type:'radio',required:true,col:true,label:T("Applicant's highest level of schooling completed OUTSIDE Australia",'Nível de estudo mais alto que você concluiu FORA da Austrália'),options:[O('Year 11 or lower','Ensino médio incompleto (ano 11 ou menos)'),O('Year 12 (high school)','Ensino médio completo'),O('Certificate II, III, IV or equivalent','Curso técnico (Certificate II, III, IV ou equivalente)'),O('Diploma or equivalent','Diploma ou equivalente (tecnólogo)'),O('Bachelor degree or equivalent','Graduação (bacharelado ou equivalente)'),O('Master degree or equivalent','Mestrado ou equivalente'),O('PhD or equivalent','Doutorado ou equivalente')]},
+    {id:'highest_course',type:'text',required:true,label:T('Name of the course','Nome do curso')},
+    {id:'highest_institution',type:'text',required:true,label:T('Name of the institution','Instituição onde cursou')},
+    {id:'highest_country',type:'text',required:true,label:T('Country of the institution','País da instituição')},
+    yn('other_studies',T('Has the applicant completed, or is currently enrolled in, any other studies or training outside Australia?','Você concluiu ou está fazendo algum outro curso fora da Austrália?'),T('Also include courses you paused or did not finish, and mark that in the status.','Inclua também cursos trancados ou que você começou e não concluiu, indicando no status.')),
+    {id:'other_studies_list',type:'group',min:1,max:10,showIf:{f:'other_studies',in:['Yes']},label:T('Other studies','Outros cursos'),item:T('Course','Curso'),add:T('Add another course','Adicionar outro curso'),fields:[
+      {id:'course',type:'text',required:true,label:T('Name of the course and institution','Nome do curso e da instituição'),ph:T('E.g.: Bachelor of Business – PUC','Ex.: Bacharel em Administração – PUC')},
+      {id:'status',type:'select',required:true,label:T('Status','Status'),options:[O('Completed','Concluído'),O('In progress','Cursando'),O('Paused','Trancado'),O('Not completed','Não concluído')]},
+      {id:'start',type:'month',required:true,label:T('Start date','Data de início')},
+      {id:'end',type:'month',label:T('Completion date (or date you stopped)','Data de conclusão (ou quando parou)'),help:T('Leave blank if you are still studying.','Deixe em branco se ainda estiver cursando.')}
+    ]},
+    {id:'studied_au',type:'radio',required:true,options:[O('No','Não'),O('Yes','Sim')],label:T('Have you previously studied in Australia?','Você já estudou na Austrália?')},
+    {id:'au_courses',type:'group',min:1,max:12,showIf:{f:'studied_au',in:['Yes']},label:T('Courses in Australia','Cursos na Austrália'),item:T('Course','Curso'),add:T('Add another course','Adicionar outro curso'),fields:[
+      {id:'course',type:'text',required:true,label:T('Name of the course','Nome do curso'),ph:'Ex.: Certificate IV in Leadership and Management'},
+      {id:'institution',type:'text',required:true,label:T('Name of the institution and postcode','Instituição e postcode'),ph:'Ex.: Greenwich / 2000'},
+      {id:'start',type:'date',required:true,label:T('When did you start the course?','Quando você iniciou o curso?'),help:H_COE},
+      {id:'end',type:'date',required:true,label:T('When did you complete the course?','Quando você concluiu o curso?'),help:H_COE}
+    ]}
+  ]},
+  {id:'employment',title:T('Employment','Trabalho'),fields:[
+    {id:'employment_info',type:'info',html:T(
+      '<b>Employment history, in chronological order</b><br>List your main jobs both in your home country and in Australia, from the oldest to the most recent, and try not to leave gaps.<br><b>Attention:</b> in Australia, only include jobs paid under an ABN and/or TFN. In Brazil, only include formal jobs (carteira assinada or a contract) or your own business.',
+      '<b>Histórico de trabalho em ordem cronológica</b><br>Coloque os principais trabalhos que você teve TANTO NO BRASIL COMO NA AUSTRÁLIA, do mais antigo para o mais recente. Evite deixar períodos sem trabalho.<br><b>Atenção:</b> na Austrália, só coloque jobs em que recebeu com ABN e/ou TFN. No Brasil, coloque empregos com carteira assinada (contrato também vale) ou empresa própria.')},
+    {id:'employment_status',type:'radio',required:true,label:T('Your current employment status','Sua situação de trabalho atual'),options:[O('Employed','Empregado(a)'),O('Unemployed','Desempregado(a)'),O('Only Studying','Apenas estudando'),O('Self Employed','Autônomo(a) / empresa própria')]},
+    {id:'jobs',type:'group',min:1,max:12,label:T('Jobs','Empregos'),item:T('Job','Emprego'),add:T('Add another job','Adicionar outro emprego'),fields:[
+      {id:'company',type:'text',required:true,label:T('Name of the company','Nome da empresa')},
+      {id:'address',type:'address',required:true,label:T('Address of the company','Endereço da empresa')},
+      {id:'contact',type:'text',required:true,label:T('Contact person in the company','Pessoa de contato na empresa'),help:T('It can be a former manager or colleague. If you have no contact person, write "Human Resources".','Pode ser ex-chefe, ex-colega etc. Se não tiver uma pessoa de contato, pode colocar Recursos Humanos.'),ph:T('First and last name','Nome e sobrenome')},
+      {id:'phone',type:'tel',required:true,label:T('Contact phone number of the company','Telefone de contato da empresa')},
+      {id:'position',type:'text',required:true,label:T('Your position','Seu cargo')},
+      {id:'start',type:'month',required:true,label:T('Start date','Data de início')},
+      {id:'end',type:'month',allow:['currently','atualmente','atual'],required:true,label:T('End date','Data de saída'),help:T('If you still work there, type "currently".','Se ainda trabalha lá, escreva "currently".'),ph:T('MM/YYYY or "currently"','MM/AAAA ou "currently"')}
+    ]},
+    {id:'job_offer_file',type:'file',multiple:true,label:T('Job offer or business in your home country','Proposta de emprego ou negócio no seu país'),help:T('If you have been offered a job in your home country for after this course, or you own a business there, attach an official document proving it.','Se você recebeu uma proposta de trabalho no seu país para depois dos estudos, ou tem/pretende abrir negócio próprio, anexe um documento comprovando.')}
+  ]},
+  {id:'language',title:T('English & language','Inglês e idioma'),fields:[
+    {id:'english_test',type:'radio',required:true,label:T('Has the applicant taken an official English test in the last 24 months? If yes, select the test with the highest score.','Você fez algum teste oficial de inglês nos últimos 24 meses? Se sim, escolha o de maior nota.'),options:[O('NO','Não'),O('IELTS','IELTS'),O('PTE','PTE'),O('CAE','CAE'),O('TOEFL','TOEFL')]},
+    {id:'test_date',type:'date',required:true,sub:true,showIf:{f:'english_test',notIn:['NO']},label:T('Date of the test','Data do teste')},
+    {id:'test_ref',type:'text',sub:true,showIf:{f:'english_test',notIn:['NO']},label:T('Test reference number','Número de referência do teste')},
+    {id:'test_country',type:'text',required:true,sub:true,showIf:{f:'english_test',notIn:['NO']},label:T('Country where the test was taken','País onde fez o teste')},
+    {id:'test_score',type:'text',required:true,sub:true,showIf:{f:'english_test',notIn:['NO']},label:T('Overall test score','Nota geral (overall)')},
+    {id:'main_language',type:'text',required:true,label:T('Your main language','Seu idioma principal'),ph:T('E.g.: Portuguese','Ex.: Português')},
+    yn('five_years',T('Has the applicant successfully completed at least five years of study in English in Australia, Canada, New Zealand, South Africa, Ireland, the United Kingdom and/or the United States?','Você já completou pelo menos 5 anos de estudo em inglês em Austrália, Canadá, Nova Zelândia, África do Sul, Irlanda, Reino Unido e/ou Estados Unidos?')),
+    yn('senior_secondary',T('In the two years before applying for the Student visa, has the applicant completed the requirements for a Senior Secondary Certificate of Education (in English, in Australia)?','Nos dois anos antes de aplicar para o visto de estudante, você concluiu o Senior Secondary Certificate of Education (ensino médio, em inglês, na Austrália)?')),
+    yn('aqf',T('In the two years before applying for the Student visa, has the applicant completed a substantial part of a course at Certificate IV level or higher (AQF), as a Student visa holder, in English, in Australia?','Nos dois anos antes de aplicar, você concluiu boa parte de um curso de nível Certificate IV ou superior na Austrália, com visto de estudante?'),T('If you have completed any course at Certificate IV level or higher in Australia, the answer is Yes.','Se você concluiu qualquer curso de nível Certificate IV ou superior na Austrália, a resposta é sim.')),
+    {id:'partner_language',type:'text',showIf:{f:'accompanying',in:['Yes']},label:T("Your partner's main language",'Idioma principal do seu partner'),help:T('Only if your partner is applying for this visa with you.','Somente se o seu partner estiver aplicando neste visto com você.'),ph:T('E.g.: Portuguese','Ex.: Português')}
+  ]},
+  {id:'travel',title:T('Travel history','Viagens'),fields:[
+    yn('travelled',T('Have any of the applicants visited any countries in the past 10 years?','Algum dos aplicantes viajou para fora do país nos últimos 10 anos?'),T('Include all international trips in the last 10 years, including holidays back to Brazil while you have been living in Australia.','Coloque as viagens internacionais dos últimos 10 anos. Inclua também as viagens de férias ao Brasil no período em que você está na Austrália.')),
+    {id:'trips',type:'group',min:1,max:40,showIf:{f:'travelled',in:['Yes']},label:T('Countries visited','Países visitados'),item:T('Trip','Viagem'),add:T('Add another trip','Adicionar outra viagem'),fields:[
+      {id:'country',type:'text',required:true,label:T('Country visited','País visitado'),ph:T('E.g.: Italy','Ex.: Itália')},
+      {id:'traveller',type:'text',required:true,label:T("Traveller's name",'Quem viajou'),help:T('You, your partner who is applying with you, or both.','Você, seu partner que está aplicando com você (se for o caso) ou ambos.')},
+      {id:'from',type:'month',required:true,label:T('Date from','Data de ida')},
+      {id:'to',type:'month',required:true,label:T('Date to','Data de volta')},
+      {id:'reason',type:'select',required:true,label:T('Reason for visit','Motivo da viagem'),options:[O('Holiday','Férias / turismo'),O('Visit to country of residence','Visita ao país de origem'),O('Work','Trabalho'),O('Study','Estudo'),O('Business','Negócios'),O('Other','Outro')]}
+    ]}
+  ]},
+  {id:'visa_history',title:T('Visa history','Histórico de vistos'),fields:[
+    {id:'visas_held',type:'textarea',required:true,label:T('Has the applicant, or any person included in this application, held or currently hold a visa to Australia or any other country? If yes, please describe.','Você (e seu partner, se houver) já teve ou tem visto para a Austrália ou outro país? Se sim, descreva.'),help:T('List the visas you have had, including all your Australian visas.','Coloque os vistos que você tem ou já teve, incluindo todos os da Austrália.')},
+    ...ynd('visa_breach',T('Has the applicant, or any person included in this application, ever been in Australia or any other country and not complied with visa conditions, or departed outside their authorised period of stay?','Você (ou seu partner, se houver) já descumpriu as condições de algum visto ou ficou além do prazo autorizado, na Austrália ou em outro país?')),
+    ...ynd('visa_refused',T('Has the applicant, or any person included in this application, ever had an application for entry or further stay in Australia or any other country refused, or had a visa cancelled?','Você (ou seu partner, se houver) já teve algum visto negado ou cancelado, na Austrália ou em outro país?'))
+  ]},
+  {id:'health',title:T('Health declarations','Declarações de saúde'),fields:[
+    ...ynd('h_outside',T('In the last five years, has any applicant visited, or lived, outside their country of passport for more than 3 consecutive months? (Do not include time spent in Australia.)','Nos últimos 5 anos, algum aplicante visitou ou morou fora do país do passaporte por mais de 3 meses seguidos? (Não conte o tempo na Austrália.)')),
+    ...ynd('h_hospital',T('Does any applicant intend to enter a hospital or a health care facility (including nursing homes) while in Australia?','Algum aplicante pretende ser internado ou ficar em hospital ou instituição de saúde (incluindo casas de repouso) na Austrália?')),
+    ...ynd('h_doctor',T('Does any applicant intend to work as, or study to be, a doctor, dentist, nurse or paramedic during their stay in Australia?','Algum aplicante pretende trabalhar ou estudar para ser médico, dentista, enfermeiro ou paramédico na Austrália?')),
+    ...ynd('h_childcare',T('Does any applicant intend to work or be a trainee at a child care centre (including preschools and creches) while in Australia?','Algum aplicante pretende trabalhar ou estagiar em creche ou centro de cuidado infantil (incluindo pré-escolas) na Austrália?')),
+    ...ynd('h_tb',T('Has any applicant ever had, or currently have, tuberculosis; been in close contact with a family member who has active tuberculosis; or ever had a chest x-ray that showed an abnormality?','Algum aplicante já teve ou tem tuberculose, teve contato próximo com familiar com tuberculose ativa, ou já fez raio-X do tórax com alguma alteração?')),
+    ...ynd('h_costs',T('During their proposed visit to Australia, does any applicant expect to incur medical costs, or require treatment or medical follow-up, for: blood disorder, cancer, heart disease, hepatitis B or C and/or liver disease, HIV infection (including AIDS), kidney disease (including dialysis), mental illness, pregnancy, respiratory disease that has required hospital admission or oxygen therapy, or other?','Durante a estadia na Austrália, algum aplicante espera ter custos médicos ou precisar de tratamento/acompanhamento para: doença do sangue, câncer, doença cardíaca, hepatite B ou C e/ou doença do fígado, HIV (incluindo AIDS), doença renal (incluindo diálise), doença mental, gravidez, doença respiratória que exigiu internação ou oxigênio, ou outra?')),
+    ...ynd('h_mobility',T('Does any applicant require assistance with mobility or care due to a medical condition?','Algum aplicante precisa de ajuda para se locomover ou de cuidados por causa de alguma condição médica?'))
+  ]},
+  {id:'character',title:T('Character declarations','Declarações de caráter'),fields:[
+    {id:'character_info',type:'info',html:T(
+      'If you answer <b>Yes</b> to any of these declarations, give all relevant details. For combined applications, say which applicant the declaration applies to. If it relates to a criminal conviction, include the date and nature of the offence, full details of the sentence, and the dates of any period of imprisonment or other detention.',
+      'Se você responder <b>Sim</b> a qualquer uma destas declarações, dê todos os detalhes. Em aplicações em conjunto, diga a qual aplicante a resposta se refere. Se for uma condenação criminal, informe a data e o tipo do crime, todos os detalhes da pena e as datas de qualquer período de prisão ou detenção.')},
+    ...ynd('c_charged',T('Has any applicant ever been charged with any offence that is currently awaiting legal action?','Algum aplicante já foi acusado de algum crime que ainda aguarda decisão da justiça?')),
+    ...ynd('c_convicted',T('Has any applicant ever been convicted of an offence in any country (including any conviction which is now removed from official records)?','Algum aplicante já foi condenado por algum crime em qualquer país (inclusive condenação que já foi retirada dos registros oficiais)?')),
+    ...ynd('c_dv',T('Has any applicant ever been the subject of a domestic violence or family violence order, or any other order of a tribunal, court or similar authority, for the personal protection of another person?','Algum aplicante já recebeu medida protetiva por violência doméstica ou familiar, ou outra ordem de tribunal ou autoridade para proteger outra pessoa?')),
+    ...ynd('c_warrant',T('Has any applicant ever been the subject of an arrest warrant or Interpol notice?','Algum aplicante já teve mandado de prisão ou alerta da Interpol?')),
+    ...ynd('c_child',T('Has any applicant ever been found guilty of a sexually based offence involving a child (including where no conviction was recorded)?','Algum aplicante já foi considerado culpado de crime sexual envolvendo criança (mesmo sem condenação registrada)?')),
+    ...ynd('c_register',T('Has any applicant ever been named on a sex offender register?','Algum aplicante já foi incluído em cadastro de criminosos sexuais?')),
+    ...ynd('c_insanity',T('Has any applicant ever been acquitted of any offence on the grounds of unsoundness of mind or insanity?','Algum aplicante já foi absolvido de algum crime por insanidade mental?')),
+    ...ynd('c_plead',T('Has any applicant ever been found by a court not fit to plead?','Algum aplicante já foi considerado por um tribunal incapaz de responder a processo?')),
+    ...ynd('c_security',T('Has any applicant ever been directly or indirectly involved in, or associated with, activities which would represent a risk to national security in Australia or any other country?','Algum aplicante já se envolveu, direta ou indiretamente, com atividades que representem risco à segurança nacional da Austrália ou de outro país?')),
+    ...ynd('c_war',T('Has any applicant ever been charged with, or indicted for: genocide, war crimes, crimes against humanity, torture, slavery, or any other crime of serious international concern?','Algum aplicante já foi acusado de genocídio, crimes de guerra, crimes contra a humanidade, tortura, escravidão ou outro crime grave de interesse internacional?')),
+    ...ynd('c_criminal_assoc',T('Has any applicant ever been associated with a person, group or organisation that has been or is involved in criminal conduct?','Algum aplicante já teve ligação com pessoa, grupo ou organização envolvida em atividades criminosas?')),
+    ...ynd('c_violence_org',T('Has any applicant ever been associated with an organisation engaged in violence, or engaged in acts of violence (including war, insurgency, freedom fighting, terrorism, protest), either overseas or in Australia?','Algum aplicante já teve ligação com organização violenta, ou participou de atos de violência (incluindo guerra, insurgência, luta armada, terrorismo, protestos), no exterior ou na Austrália?')),
+    ...ynd('c_military',T('Has any applicant ever served in a military force, police force, state-sponsored or private militia, or intelligence agency (including secret police)?','Algum aplicante já serviu em força militar, polícia, milícia estatal ou privada, ou agência de inteligência (incluindo polícia secreta)?'),T('In Brazil, this includes compulsory military service.','No Brasil, isso inclui o serviço militar obrigatório.')),
+    ...ynd('c_training',T('Has any applicant ever undergone any military or paramilitary training, been trained in weapons or explosives, or in the manufacture of chemical or biological products?','Algum aplicante já fez treinamento militar ou paramilitar, com armas ou explosivos, ou na fabricação de produtos químicos ou biológicos?')),
+    ...ynd('c_smuggling',T('Has any applicant ever been involved in people smuggling or people trafficking offences?','Algum aplicante já se envolveu em contrabando ou tráfico de pessoas?')),
+    ...ynd('c_deported',T('Has any applicant ever been removed, deported or excluded from any country (including Australia)?','Algum aplicante já foi removido, deportado ou impedido de entrar em algum país (incluindo a Austrália)?')),
+    ...ynd('c_overstay',T('Has any applicant ever overstayed a visa in any country (including Australia)?','Algum aplicante já ficou além do prazo do visto em algum país (incluindo a Austrália)?')),
+    ...ynd('c_debts',T('Has any applicant ever had any outstanding debts to the Australian Government or any public authority in Australia?','Algum aplicante já teve dívidas pendentes com o governo australiano ou com algum órgão público na Austrália?'))
+  ]},
+  {id:'review',title:T('Review & sign','Revisão e assinatura'),review:true,fields:[
+    {id:'declaration',type:'checks',required:true,label:T('Declaration','Declaração'),options:[O('I declare that the information I have given is complete, correct and up to date.','Declaro que as informações que forneci são completas, corretas e atuais.')]},
+    {id:'signature',type:'signature',required:true,label:T('Signature','Assinatura'),help:T('Use your mouse or finger to sign in the box.','Use o mouse ou o dedo para assinar no quadro.')}
+  ]}
+  ]
+},
+gs:{
+  title:T('GS Letter Questions','Perguntas para a Carta GS'),
+  lead:T('These questions help Trip Study write the letter sent to immigration to show that you are a genuine student. Write as much as you can. Your answers are saved automatically, so you can stop and come back later.','Essas perguntas ajudam a Trip Study a escrever a sua carta para a imigração, demonstrando que você é um estudante genuíno. Escreva o máximo de informações que puder! Suas respostas são salvas automaticamente, então você pode parar e continuar depois.'),
+  meta:{name:'gs_name',email:'gs_email'},
+  steps:[
+  {id:'about',title:T('About you','Sobre você'),fields:[
+    {id:'gs_name',type:'text',required:true,label:T('Full name','Nome completo')},
+    {id:'gs_email',type:'email',required:true,label:T('Email','Email')},
+    {id:'gs_age_status',type:'textarea',required:true,label:T('Age and relationship status','Idade e estado civil'),ph:T('E.g.: 29, single','Ex.: 29 anos, solteiro(a)')}
+  ]},
+  {id:'career',title:T('Career & history','Carreira e história'),fields:[
+    {id:'gs_career',type:'textarea',long:true,required:true,label:T('Describe your career in your home country: the courses you graduated from, the jobs you had, and your duties there.','Descreva sua carreira no seu país: os cursos em que você se formou, os trabalhos que teve e quais eram suas funções.')},
+    {id:'gs_history',type:'textarea',long:true,required:true,label:T("Describe your history in Australia: when you arrived, which courses you've already studied and why you decided to take them.",'Conte sua história na Austrália: quando chegou, quais cursos já fez e por que decidiu fazê-los.')}
+  ]},
+  {id:'plans',title:T('Future plans','Planos futuros'),fields:[
+    {id:'gs_work_plans',type:'textarea',long:true,required:true,label:T('What do you intend to work with when you return to your home country: what type of company, what positions will you apply for? Or, if you intend to open your own business, what kind of services would you provide?','No que você pretende trabalhar quando voltar ao seu país: que tipo de empresa e quais cargos? Ou, se pretende abrir seu próprio negócio, que tipo de serviço ofereceria?')},
+    {id:'gs_docs',type:'file',multiple:true,label:T('Documents showing the kind of job you intend to have when you go back','Documentos que mostrem o tipo de trabalho que você pretende ter ao voltar'),help:T("E.g. a job offer letter for when you return, the articles of association of your business or your family's business, or a screenshot of LinkedIn or another site showing the kind of position you are aiming for.",'Anexe se você tiver: carta de oferta ou promessa de emprego para quando voltar, contrato social do seu negócio ou do negócio da sua família, ou print do LinkedIn ou outro site mostrando o tipo de vaga que você busca.')},
+    {id:'gs_courses_help',type:'textarea',long:true,required:true,label:T('How will the new courses you are taking in Australia help your career in your home country?','Como os novos cursos que você vai fazer na Austrália vão ajudar sua carreira no seu país?')},
+    {id:'gs_why_australia',type:'textarea',long:true,required:true,label:T('Why did you decide to study in Australia instead of studying these courses in your country?','Por que você decidiu estudar na Austrália em vez de fazer esses cursos no seu país?')},
+    {id:'gs_why_school',type:'textarea',long:true,required:true,label:T('Why did you choose the school where you are going to study now? Which subjects will be important to your career?','Por que você escolheu a escola onde vai estudar agora? Quais matérias serão importantes para sua carreira?')}
+  ]},
+  {id:'ties',title:T('Ties to home','Vínculos com seu país'),fields:[
+    {id:'gs_home_life',type:'textarea',long:true,required:true,label:T('Talk about your life in your home country: who you live with, who your family members are, what your parents or siblings work with, and what you have left there (a pet you miss, your own house, a car, etc.).','Fale sobre sua vida no seu país: com quem você mora, quem são seus familiares, com o que seus pais ou irmãos trabalham, e o que você deixou lá (um pet de que sente falta, bens como casa própria, carro etc.).')},
+    {id:'gs_partner',type:'textarea',long:true,label:T('If you are applying for a visa with your partner: tell us about their visa history (if they have already studied here and which courses), how long you have been together, and why having this person with you during your studies in Australia is important.','Se você vai aplicar com seu partner: conte o histórico de visto dele(a) (se já estudou aqui e quais cursos), há quanto tempo vocês estão juntos e a importância de ter essa pessoa com você durante os estudos na Austrália.')}
+  ]},
+  {id:'review',title:T('Review & sign','Revisão e assinatura'),review:true,fields:[
+    {id:'signature',type:'signature',required:true,label:T('Signature','Assinatura'),help:T('Use your mouse or finger to sign in the box.','Use o mouse ou o dedo para assinar no quadro.')}
+  ]}
+  ]
+}
+};
+
+/* Interface text */
+const S={
+  step:T('Step','Etapa'),of:T('of','de'),next:T('Next','Próximo'),back:T('Back','Voltar'),
+  saveLater:T('Continue later','Continuar depois'),submit:T('Submit','Enviar formulário'),submitting:T('Sending…','Enviando…'),
+  optional:T('optional','opcional'),required:T('This question is required.','Esta pergunta é obrigatória.'),
+  badEmail:T('Enter a valid email address.','Digite um email válido.'),badDate:T('Use the format DD/MM/YYYY.','Use o formato DD/MM/AAAA.'),
+  badMonth:T('Use the format MM/YYYY.','Use o formato MM/AAAA.'),badCpf:T('The CPF must have 11 digits.','O CPF deve ter 11 números.'),
+  fixErrors:T('Some answers are missing or need fixing. They are marked below.','Algumas respostas estão faltando ou precisam de ajuste. Elas estão marcadas abaixo.'),
+  stepErrors:T('Step "{s}" still has answers missing or to fix.','A etapa "{s}" ainda tem respostas faltando ou para ajustar.'),
+  first:T('Given name(s)','Nome(s)'),last:T('Family name (surname)','Sobrenome'),
+  line1:T('Street address','Endereço (rua e número)'),line2:T('Apartment, unit, complement','Apartamento, unidade, complemento'),
+  city:T('City/Suburb','Cidade / bairro'),state:T('State/Province','Estado'),zip:T('Postcode','CEP / postcode'),country:T('Country','País'),
+  choose:T('Choose…','Escolha…'),chooseFile:T('Choose file','Escolher arquivo'),addFile:T('Add file','Adicionar arquivo'),replaceFile:T('Replace','Trocar'),
+  uploading:T('Uploading…','Enviando arquivo…'),uploadFail:T('The file could not be uploaded. Check your connection and try again.','Não foi possível enviar o arquivo. Verifique sua internet e tente de novo.'),
+  tooBig:T('This file is larger than 10 MB. Send a smaller file or a photo/PDF with lower resolution.','Este arquivo tem mais de 10 MB. Envie um arquivo menor ou uma foto/PDF com resolução menor.'),
+  fileTypes:T('PDF, image or document · up to 10 MB','PDF, imagem ou documento · até 10 MB'),
+  remove:T('Remove','Remover'),removeQ:T('Remove','Remover'),
+  clearSig:T('Clear signature','Limpar assinatura'),signHere:T('Sign here','Assine aqui'),
+  saving:T('Saving…','Salvando…'),saved:T('Saved at {t}','Salvo às {t}'),savedLocal:T('Saved on this device at {t}','Salvo neste aparelho às {t}'),
+  saveErr:T('Saved on this device. Waiting for internet to save online…','Salvo neste aparelho. Aguardando internet para salvar online…'),
+  autosave:T('Your answers are saved automatically','Suas respostas são salvas automaticamente'),
+  restored:T('Welcome back! We restored your answers.','Bem-vindo(a) de volta! Recuperamos suas respostas.'),
+  reviewTitle:T('Check your answers','Confira suas respostas'),reviewIntro:T('Read everything carefully before signing. Click "Edit" to change any part.','Leia tudo com atenção antes de assinar. Clique em "Editar" para mudar qualquer parte.'),
+  edit:T('Edit','Editar'),notAnswered:T('Not answered','Sem resposta'),signed:T('Signed','Assinado'),
+  laterTitle:T('Continue later','Continuar depois'),
+  laterText:T('Your answers are already saved. On this device, just open the form again. To continue on another device, use this personal link:','Suas respostas já estão salvas. Neste aparelho, é só abrir o formulário de novo. Para continuar em outro aparelho, use este link pessoal:'),
+  laterPrivate:T('Keep this link private: anyone with it can see your answers.','Guarde este link só para você: quem tiver o link consegue ver suas respostas.'),
+  copy:T('Copy','Copiar'),copied:T('Link copied','Link copiado'),
+  emailLink:T('Or receive the link by email:','Ou receba o link por email:'),sendEmail:T('Send','Enviar'),
+  emailSent:T('Link sent to {e}. Check your inbox (and spam).','Link enviado para {e}. Confira sua caixa de entrada (e o spam).'),
+  emailFail:T('We could not send the email now. Copy the link above instead.','Não conseguimos enviar o email agora. Copie o link acima.'),
+  close:T('Close','Fechar'),
+  previewNote:T('Preview mode: answers are saved only in this browser and nothing is sent.','Modo de pré-visualização: as respostas ficam salvas só neste navegador e nada é enviado.'),
+  previewLink:T('The personal link appears here once the form is published.','O link pessoal aparece aqui quando o formulário estiver publicado.'),
+  startOver:T('Start over','Começar de novo'),
+  startOverQ:T('Erase all answers on this form and start again?','Apagar todas as respostas deste formulário e começar de novo?'),
+  startOverYes:T('Yes, erase','Sim, apagar'),cancel:T('Cancel','Cancelar'),
+  doneTitle:T('Thank you! Your form was sent.','Obrigado! Seu formulário foi enviado.'),
+  doneText:T('Trip Study has received your answers and will contact you if anything else is needed.','A Trip Study recebeu suas respostas e vai entrar em contato se precisar de mais alguma coisa.'),
+  donePreview:T('(Preview: nothing was actually sent.)','(Pré-visualização: nada foi enviado de verdade.)'),
+  newForm:T('Fill in a new form','Preencher um novo formulário'),
+  alreadyTitle:T('This form has already been sent','Este formulário já foi enviado'),
+  alreadyText:T('These answers were already submitted to Trip Study.','Estas respostas já foram enviadas para a Trip Study.'),
+  submitErr:T('We could not send the form. Your answers are safe. Check your internet and try again.','Não foi possível enviar o formulário. Suas respostas estão salvas. Verifique sua internet e tente de novo.'),
+  needSave:T('Wait for the files to finish uploading.','Aguarde os arquivos terminarem de enviar.'),
+  item:T('Item','Item')
+};
+
+/* ================================================================
+   2. ENGINE
+   ================================================================ */
+/* Where answers go: the Apps Script web app. Inside Apps Script the page talks to it directly;
+   hosted elsewhere (GitHub Pages) it calls the same functions through API_URL. */
+const API_URL='https://script.google.com/macros/s/AKfycbzod3K02fao6ucEf4Ix2dCTZ8_v-X1FSwZWP-8lX3QznvnGBjh7Y0YPNGoU_IaOKNwj-Q/exec';
+const GAS=!!(window.google&&google.script&&google.script.run);
+const LIVE=GAS||(!!API_URL&&/^https?:$/.test(location.protocol)&&!window.FORCE_FORM);
+const MAX_FILE=10*1024*1024;
+let FID='visa',F=null,KEY='';
+const st={lang:'pt',step:0,maxStep:0,answers:{},draftId:null,updatedAt:0,errors:{},uploading:{},submitted:false,done:false};
+let appUrl='';
+const $app=document.getElementById('app'),$nav=document.getElementById('nav');
+
+const tr=o=>o==null?'':(typeof o==='string'?o:(o[st.lang]||o.en||''));
+const fmt=(o,map)=>tr(o).replace(/\{(\w+)\}/g,(_,k)=>map[k]);
+const call=(fn,...a)=>GAS
+  ? new Promise((res,rej)=>google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](...a))
+  : fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:fn,args:a}),redirect:'follow'})
+      .then(r=>{ if(!r.ok) throw new Error('http_'+r.status); return r.json(); })
+      .then(j=>{ if(!j||!j.ok) throw new Error((j&&j.error)||'fail'); return j.result; });
+function setUrl(params){
+  try{
+    if(GAS){ google.script.history.replace(null,params); return; }
+    const u=new URL(location.href); u.search=new URLSearchParams(params).toString(); u.hash=''; history.replaceState(null,'',u.toString());
+  }catch(e){}
+}
+const pageUrl=()=>location.origin+location.pathname;
+function h(tag,attrs,...kids){
+  const el=document.createElement(tag);
+  if(attrs) for(const k in attrs){const v=attrs[k]; if(v==null||v===false) continue;
+    if(k==='class') el.className=v; else if(k==='html') el.innerHTML=v; else if(k==='text') el.textContent=v;
+    else if(k.startsWith('on')) el.addEventListener(k.slice(2),v); else if(v===true) el.setAttribute(k,''); else el.setAttribute(k,v);}
+  for(const c of kids.flat()){ if(c==null||c===false) continue; el.append(c.nodeType?c:document.createTextNode(String(c))); }
+  return el;
+}
+const pkey=p=>p.join('.');
+function getP(p){let o=st.answers; for(const k of p){ if(o==null) return undefined; o=o[k]; } return o;}
+function setP(p,v){let o=st.answers; for(let i=0;i<p.length-1;i++){ if(o[p[i]]==null) o[p[i]]=typeof p[i+1]==='number'?[]:{}; o=o[p[i]]; } o[p[p.length-1]]=v;}
+function rid(n){const a='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789',b=new Uint8Array(n);crypto.getRandomValues(b);return Array.from(b,x=>a[x%a.length]).join('');}
+function nowTime(d){return new Date(d||Date.now()).toLocaleTimeString(st.lang==='pt'?'pt-BR':'en-AU',{hour:'2-digit',minute:'2-digit'});}
+
+/* numbering: every top-level question gets a stable number; follow-ups inherit it */
+function numberForm(){ let n=0; F.steps.forEach(s=>s.fields.forEach(f=>{ if(f.type==='info') return; if(f.sub) f.__n=n; else f.__n=++n; })); }
+
+/* visibility */
+function visible(f){ const s=f.showIf; if(!s) return true; const v=st.answers[s.f];
+  const arr=Array.isArray(v)?v:(v==null||v===''?[]:[v]);
+  if(s.in) return arr.some(x=>s.in.includes(x));
+  if(s.notIn) return arr.length>0&&!arr.some(x=>s.notIn.includes(x));
+  return true; }
+
+/* emptiness & validation */
+function isEmpty(f,v){
+  switch(f.type){
+    case 'name': return !(v&&String(v.first||'').trim()&&String(v.last||'').trim());
+    case 'address': return !(v&&String(v.line1||'').trim()&&String(v.city||'').trim()&&(f.noCountry||String(v.country||'').trim()));
+    case 'checks': return !(Array.isArray(v)&&v.length);
+    case 'file': return f.multiple?!(Array.isArray(v)&&v.length):!(v&&(v.id||v.name));
+    case 'signature': return !v;
+    default: return v==null||String(v).trim()==='';
+  }
+}
+function validDate(s){const m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s||''); if(!m) return false; const d=+m[1],mo=+m[2],y=+m[3]; const dt=new Date(y,mo-1,d); return y>1900&&y<2100&&dt.getMonth()===mo-1&&dt.getDate()===d;}
+function validMonth(s,allow){ const t=String(s||'').trim(); if(allow&&allow.includes(t.toLowerCase())) return true; const m=/^(\d{2})\/(\d{4})$/.exec(t); return !!m&&+m[1]>=1&&+m[1]<=12&&+m[2]>1900&&+m[2]<2100; }
+function fieldError(f,v){
+  if(isEmpty(f,v)) return f.required?S.required:null;
+  if(f.type==='email'&&!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(v).trim())) return S.badEmail;
+  if(f.type==='date'&&!validDate(v)) return S.badDate;
+  if(f.type==='month'&&!validMonth(v,f.allow)) return S.badMonth;
+  if(f.mask==='digits'&&f.maxlength===11&&String(v).length!==11) return S.badCpf;
+  return null;
+}
+function validateStep(i){
+  const errs={}; const s=F.steps[i];
+  s.fields.forEach(f=>{
+    if(f.type==='info'||!visible(f)) return;
+    if(f.type==='group'){ const items=st.answers[f.id]||[];
+      if(items.length<(f.min||0)) errs[f.id]=S.required;
+      items.forEach((it,ix)=>f.fields.forEach(sf=>{ const e=fieldError(sf,it&&it[sf.id]); if(e) errs[pkey([f.id,ix,sf.id])]=e; }));
+      return; }
+    const e=fieldError(f,st.answers[f.id]); if(e) errs[f.id]=e;
+  });
+  return errs;
+}
+
+/* ---------- saving ---------- */
+let tLocal=null,tServer=null,dirty=false,saving=false,saveState={k:'idle'};
+function snapshot(){return {answers:st.answers,step:st.step,maxStep:st.maxStep,draftId:st.draftId,updatedAt:st.updatedAt,lang:st.lang};}
+function meta(){ const m=F.meta,a=st.answers; const nm=a[m.name]; const name=typeof nm==='object'&&nm?[nm.first,nm.last].filter(Boolean).join(' '):(nm||'');
+  return {name:name.trim(),email:String(a[m.email]||'').trim(),phone:m.phone?String(a[m.phone]||''):'',step:`${st.step+1}/${F.steps.length} – ${F.steps[st.step].title.pt}`,pageUrl:GAS?'':pageUrl()}; }
+function saveLocal(){ try{localStorage.setItem(KEY,JSON.stringify(snapshot()));}catch(e){} if(!LIVE) setSave('local'); }
+function readLocal(){ try{const r=localStorage.getItem(KEY); return r?JSON.parse(r):null;}catch(e){return null;} }
+function ensureDraft(){ if(!st.draftId){ st.draftId=rid(24); if(LIVE) setUrl({form:FID,draft:st.draftId}); } }
+function changed(){
+  st.updatedAt=Date.now(); dirty=true;
+  clearTimeout(tLocal); tLocal=setTimeout(saveLocal,250);
+  if(LIVE){ ensureDraft(); clearTimeout(tServer); tServer=setTimeout(saveServer,3500); setSave('pending'); }
+}
+async function saveServer(){
+  if(!LIVE||!dirty||saving||st.done) return;
+  ensureDraft(); dirty=false; saving=true; setSave('saving');
+  try{ const r=await call('saveDraft',FID,st.draftId,JSON.stringify({answers:st.answers,step:st.step,maxStep:st.maxStep,updatedAt:st.updatedAt,meta:meta()}));
+       if(r&&r.submitted){ st.submitted=true; render(); return; }
+       setSave('ok'); }
+  catch(e){ dirty=true; setSave('err'); clearTimeout(tServer); tServer=setTimeout(saveServer,15000); }
+  finally{ saving=false; if(dirty&&saveState.k!=='err'){ clearTimeout(tServer); tServer=setTimeout(saveServer,1500);} }
+}
+function flush(){ clearTimeout(tLocal); saveLocal(); if(LIVE&&dirty){ clearTimeout(tServer); saveServer(); } }
+function setSave(k){ saveState={k,t:Date.now()}; paintStatus(); }
+function paintStatus(){ const el=document.getElementById('savestat'); if(!el) return; const k=saveState.k;
+  el.className='status'+(k==='ok'||k==='local'?' ok':k==='err'?' bad':'');
+  el.textContent= k==='saving'||k==='pending'?tr(S.saving): k==='ok'?fmt(S.saved,{t:nowTime(saveState.t)}): k==='local'?fmt(S.savedLocal,{t:nowTime(saveState.t)}): k==='err'?tr(S.saveErr): tr(S.autosave); }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') flush(); });
+window.addEventListener('pagehide',flush);
+
+/* ---------- masks ---------- */
+function maskDate(v){const d=v.replace(/\D/g,'').slice(0,8); return d.length>4?d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4):d.length>2?d.slice(0,2)+'/'+d.slice(2):d;}
+function maskMonth(v,allow){ if(/[a-zA-Z]/.test(v)) return v; const d=v.replace(/\D/g,'').slice(0,6); return d.length>2?d.slice(0,2)+'/'+d.slice(2):d; }
+
+/* ---------- rendering ---------- */
+let toastT=null;
+function toast(msg){ const old=document.querySelector('.toast'); if(old) old.remove(); const t=h('div',{class:'toast',role:'status'},msg); document.body.append(t); clearTimeout(toastT); toastT=setTimeout(()=>t.remove(),3800); }
+
+function render(keepScroll){
+  const y=window.scrollY; $app.innerHTML=''; $nav.hidden=true;
+  $app.append(header());
+  if(st.submitted){ $app.append(simpleCard('✓',S.alreadyTitle,S.alreadyText,true)); return; }
+  if(st.done){ $app.append(simpleCard('✓',S.doneTitle,S.doneText,true,!LIVE?S.donePreview:null)); return; }
+  $app.append(progress());
+  const card=h('div',{class:'card',id:'card'}); $app.append(card);
+  const s=F.steps[st.step];
+  card.append(h('h2',{text:tr(s.title)}));
+  if(st.errors.__top) card.append(h('p',{class:'err',style:'margin:10px 0 0'},tr(st.errors.__top)));
+  if(s.review) card.append(reviewBlock());
+  let firstDone=false;
+  s.fields.forEach(f=>{ if(!visible(f)) return; const el=renderField(f,[f.id]); if(!firstDone&&!f.sub&&f.type!=='info'){el.classList.add('first'); firstDone=true;} card.append(el); });
+  $app.append(h('div',{class:'foot'},h('button',{class:'linkbtn',type:'button',onclick:confirmStartOver},tr(S.startOver))));
+  renderNav();
+  if(keepScroll) window.scrollTo(0,y);
+}
+function header(){
+  const f=F; const wrap=h('div');
+  wrap.append(h('div',{class:'topbar'},
+    h('div',{class:'brand'},'Trip Study ',h('span',null,'· Gold Coast')),
+    h('div',{class:'lang',role:'group','aria-label':'Language / Idioma'},
+      h('button',{type:'button','aria-pressed':String(st.lang==='en'),onclick:()=>setLang('en')},'English'),
+      h('button',{type:'button','aria-pressed':String(st.lang==='pt'),onclick:()=>setLang('pt')},'Português'))));
+  wrap.append(h('h1',{text:tr(f.title)}));
+  if(!st.done&&!st.submitted) wrap.append(h('p',{class:'lead',text:tr(f.lead)}));
+  if(!LIVE) wrap.append(h('div',{class:'preview',text:tr(S.previewNote)}));
+  return wrap;
+}
+function setLang(l){ st.lang=l; document.documentElement.lang=l==='pt'?'pt-BR':'en'; saveLocal(); render(true); }
+function progress(){
+  const n=F.steps.length; const pct=Math.round((st.step)/(n-1)*100);
+  const box=h('div',{class:'progress'},
+    h('div',{class:'meta'},h('span',null,`${tr(S.step)} ${st.step+1} ${tr(S.of)} ${n}`),h('span',{text:tr(F.steps[st.step].title)})),
+    h('div',{class:'bar'},h('i',{style:`width:${Math.max(pct,3)}%`})));
+  const steps=h('div',{class:'steps',role:'navigation'});
+  F.steps.forEach((s,i)=>steps.append(h('button',{type:'button',class:i===st.step?'cur':(i<=st.maxStep?'done':''),disabled:i>st.maxStep,'aria-current':i===st.step?'step':null,onclick:()=>goto(i)},`${i+1}. ${tr(s.title)}`)));
+  box.append(steps);
+  setTimeout(()=>{const c=steps.querySelector('.cur'); if(c){ const a=c.getBoundingClientRect(),b=steps.getBoundingClientRect(); steps.scrollLeft+=Math.max(-steps.scrollLeft,(a.left-b.left)-(b.width-a.width)/2);} },0);
+  return box;
+}
+function simpleCard(icon,title,text,newBtn,extra){
+  return h('div',{class:'card done-screen'},h('div',{class:'big'},icon),h('h2',{text:tr(title)}),h('p',{text:tr(text)}),extra?h('p',{class:'note',text:tr(extra)}):null,
+    newBtn?h('button',{class:'btn ink',type:'button',onclick:()=>resetAll()},tr(S.newForm)):null);
+}
+function renderNav(){
+  $nav.hidden=false; $nav.innerHTML='';
+  const last=st.step===F.steps.length-1; const anyUp=Object.keys(st.uploading).length>0;
+  const inner=h('div',{class:'in'},
+    st.step>0?h('button',{class:'btn ghost',type:'button',onclick:()=>goto(st.step-1)},'← '+tr(S.back)):null,
+    h('span',{class:'grow'},h('span',{id:'savestat',class:'status'})),
+    h('button',{class:'btn ghost',type:'button',onclick:openLater},tr(S.saveLater)),
+    last?h('button',{class:'btn white',type:'button',id:'submitbtn',disabled:anyUp,onclick:submit},tr(S.submit)):h('button',{class:'btn white',type:'button',onclick:next},tr(S.next)+' →'));
+  $nav.append(inner); paintStatus();
+}
+
+function labelEl(f,forId,nOverride){
+  const n=f.sub?null:(nOverride!==undefined?nOverride:f.__n);
+  return h(forId?'label':'span',{class:'lbl',for:forId||null,id:forId?null:null},
+    n?h('span',{class:'n'},n+'.'):null, tr(f.label),
+    f.required?h('span',{class:'req','aria-hidden':'true'},'*'):h('span',{class:'opt-tag'},'('+tr(S.optional)+')'));
+}
+function renderField(f,path,inGroup){
+  if(f.type==='info') return h('div',{class:'info',html:tr(f.html)});
+  if(f.type==='group') return renderGroup(f);
+  const key=pkey(path); const id='f_'+key.replace(/\W/g,'_'); const v=getP(path);
+  const err=st.errors[key];
+  const box=h('div',{class:'q'+(f.sub?' sub':'')+(err?' bad':''),'data-key':key});
+  const isChoice=['radio','checks','name','address','file','signature'].includes(f.type);
+  box.append(isChoice?h('div',{id:id+'_l'},labelEl(f,null,inGroup?null:undefined)):labelEl(f,id,inGroup?null:undefined));
+  if(f.help) box.append(h('p',{class:'help',id:id+'_h',text:tr(f.help)}));
+  box.append(control(f,path,id,v));
+  if(err) box.append(h('div',{class:'err',role:'alert'},tr(err)));
+  return box;
+}
+function clearErr(path,box){ const k=pkey(path); if(st.errors[k]){ delete st.errors[k]; if(box){box.classList.remove('bad'); const e=box.querySelector(':scope > .err'); if(e) e.remove();} } }
+function boxOf(el){return el.closest('.q');}
+
+function control(f,path,id,v){
+  const desc=f.help?id+'_h':null;
+  const onText=(e,maskFn)=>{ let val=e.target.value; if(maskFn){ const m=maskFn(val); if(m!==val){ e.target.value=m; val=m; } } setP(path,val); clearErr(path,boxOf(e.target)); changed(); };
+  switch(f.type){
+    case 'text': case 'email': case 'tel': case 'date': case 'month': {
+      const mask=f.type==='date'?maskDate:f.type==='month'?(x=>maskMonth(x,f.allow)):f.mask==='digits'?(x=>x.replace(/\D/g,'').slice(0,f.maxlength||99)):null;
+      const ph=f.ph?tr(f.ph):f.type==='date'?tr(PH_DATE):f.type==='month'?tr(PH_MONTH):'';
+      return h('input',{id,type:f.type==='email'?'email':f.type==='tel'?'tel':'text',value:v||'',placeholder:ph,'aria-describedby':desc,
+        inputmode:f.inputmode||(f.type==='date'||(f.type==='month'&&!f.allow)?'numeric':null),autocomplete:f.type==='email'?'email':f.type==='tel'?'tel':'off',
+        maxlength:f.type==='date'?10:(f.mask?null:(f.maxlength||null)),oninput:e=>onText(e,mask)});
+    }
+    case 'textarea': {
+      const ta=h('textarea',{id,class:f.long?'long':null,placeholder:f.ph?tr(f.ph):'','aria-describedby':desc,oninput:e=>{onText(e); grow(e.target);}});
+      ta.value=v||''; setTimeout(()=>grow(ta),0); return ta;
+    }
+    case 'select': {
+      const sel=h('select',{id,'aria-describedby':desc,onchange:e=>{setP(path,e.target.value); clearErr(path,boxOf(e.target)); changed();}},
+        h('option',{value:''},tr(S.choose)), f.options.map(o=>h('option',{value:o.v,selected:v===o.v},tr(o))));
+      return sel;
+    }
+    case 'radio': {
+      const g=h('div',{class:'opts'+(f.col?' col':''),role:'radiogroup','aria-labelledby':id+'_l'});
+      f.options.forEach((o,i)=>g.append(h('label',null,h('input',{type:'radio',name:id,value:o.v,checked:v===o.v,onchange:()=>{setP(path,o.v); clearErr(path); changed(); render(true);}}),h('span',{class:'dot'}),tr(o))));
+      return g;
+    }
+    case 'checks': {
+      const cur=Array.isArray(v)?v:[];
+      const g=h('div',{class:'opts multi'+(f.options.length===1||f.col?' col':''),role:'group','aria-labelledby':id+'_l'});
+      f.options.forEach(o=>g.append(h('label',null,h('input',{type:'checkbox',value:o.v,checked:cur.includes(o.v),onchange:e=>{
+        let arr=(Array.isArray(getP(path))?getP(path):[]).filter(x=>x!==o.v);
+        if(e.target.checked){ if(f.exclusive&&o.v===f.exclusive) arr=[o.v]; else { arr=arr.filter(x=>x!==f.exclusive); arr.push(o.v);} }
+        setP(path,arr); clearErr(path); changed(); render(true);}}),h('span',{class:'dot'}),tr(o))));
+      return g;
+    }
+    case 'name': {
+      const cur=v||{}; const sub=(k,lab,ac)=>{const i2=id+'_'+k; return h('div',null,h('label',{class:'mini',for:i2},tr(lab)),
+        h('input',{id:i2,type:'text',value:cur[k]||'',autocomplete:ac,oninput:e=>{const o=Object.assign({},getP(path)||{}); o[k]=e.target.value; setP(path,o); clearErr(path,boxOf(e.target)); changed();}}));};
+      return h('div',{class:'grid2'},sub('first',S.first,'given-name'),sub('last',S.last,'family-name'));
+    }
+    case 'address': {
+      const cur=v||{}; const sub=(k,lab,cls,ac)=>{const i2=id+'_'+k; return h('div',{class:cls||null},h('label',{class:'mini',for:i2},tr(lab)),
+        h('input',{id:i2,type:'text',value:cur[k]||'',autocomplete:ac||'off',oninput:e=>{const o=Object.assign({},getP(path)||{}); o[k]=e.target.value; setP(path,o); clearErr(path,boxOf(e.target)); changed();}}));};
+      return h('div',{class:'grid2'},sub('line1',S.line1,'full','address-line1'),sub('line2',S.line2,'full','address-line2'),sub('city',S.city,null,'address-level2'),sub('state',S.state,null,'address-level1'),sub('zip',S.zip,null,'postal-code'),f.noCountry?null:sub('country',S.country,null,'country-name'));
+    }
+    case 'file': return fileControl(f,path,id);
+    case 'signature': return sigControl(f,path,id);
+  }
+  return h('span');
+}
+function grow(t){ t.style.height='auto'; t.style.height=Math.min(t.scrollHeight+3,900)+'px'; }
+
+/* groups (repeatable blocks) */
+function renderGroup(f){
+  let items=st.answers[f.id]; if(!Array.isArray(items)){ items=[]; st.answers[f.id]=items; }
+  if(items.length<(f.min||0)) for(let i=items.length;i<f.min;i++) items.push({});
+  const err=st.errors[f.id];
+  const box=h('div',{class:'q group'+(err?' bad':''),'data-key':f.id});
+  box.append(h('span',{class:'lbl'},h('span',{class:'n'},f.__n+'.'),tr(f.label),h('span',{class:'req','aria-hidden':'true'},'*')));
+  if(f.help) box.append(h('p',{class:'help',text:tr(f.help)}));
+  items.forEach((it,ix)=>{
+    const card=h('div',{class:'item'});
+    card.append(h('div',{class:'head'},h('strong',null,`${tr(f.item)} ${ix+1}`),
+      items.length>(f.min||0)?h('button',{type:'button',class:'linkbtn',onclick:()=>{ items.splice(ix,1); purgeGroupErrors(f.id); changed(); render(true);}},tr(S.remove)):null));
+    f.fields.forEach(sf=>card.append(renderField(sf,[f.id,ix,sf.id],true)));
+    box.append(card);
+  });
+  if(items.length<(f.max||99)) box.append(h('button',{type:'button',class:'add',onclick:()=>{ items.push({}); changed(); render(true); }},'+ '+tr(f.add)));
+  if(err) box.append(h('div',{class:'err',role:'alert'},tr(err)));
+  return box;
+}
+function purgeGroupErrors(gid){ Object.keys(st.errors).forEach(k=>{ if(k.startsWith(gid+'.')) delete st.errors[k]; }); }
+
+/* files */
+function fileControl(f,path,id){
+  const key=pkey(path); const v=getP(path); const list=f.multiple?(Array.isArray(v)?v:[]):(v&&(v.id||v.name)?[v]:[]);
+  const wrap=h('div',{class:'file'});
+  const input=h('input',{type:'file',id,class:'sr',accept:'image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.heic',onchange:e=>{const fl=e.target.files&&e.target.files[0]; e.target.value=''; if(fl) upload(f,path,fl);}});
+  list.forEach((it,ix)=>wrap.append(h('span',{class:'chip'},h('span',{title:it.name},'📎 '+it.name),
+    h('button',{type:'button','aria-label':tr(S.remove)+' '+it.name,onclick:()=>{ if(f.multiple){const a=(getP(path)||[]).slice(); a.splice(ix,1); setP(path,a);} else setP(path,null); changed(); render(true);}},'×'))));
+  if(st.uploading[key]) wrap.append(h('span',{class:'note'},tr(S.uploading)));
+  else if(f.multiple||!list.length) wrap.append(h('label',{class:'btn soft',for:id,tabindex:'0',onkeydown:e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click();}}},list.length?tr(S.addFile):tr(S.chooseFile)));
+  else wrap.append(h('label',{class:'linkbtn',for:id,tabindex:'0',onkeydown:e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click();}}},tr(S.replaceFile)));
+  wrap.append(input);
+  return h('div',null,wrap,h('div',{class:'note',style:'margin-top:6px'},tr(S.fileTypes)));
+}
+function readB64(file){return new Promise((res,rej)=>{const r=new FileReader(); r.onload=()=>res(String(r.result).split(',')[1]||''); r.onerror=rej; r.readAsDataURL(file);});}
+async function upload(f,path,file){
+  const key=pkey(path);
+  if(file.size>MAX_FILE){ st.errors[key]=S.tooBig; render(true); return; }
+  delete st.errors[key];
+  if(!LIVE){ const rec={name:file.name,size:file.size}; if(f.multiple){ const a=(getP(path)||[]).slice(); a.push(rec); setP(path,a);} else setP(path,rec); changed(); render(true); return; }
+  ensureDraft(); st.uploading[key]=true; render(true);
+  try{
+    const b64=await readB64(file);
+    const prev=!f.multiple&&getP(path)&&getP(path).id?getP(path).id:'';
+    const r=JSON.parse(await call('uploadFile',FID,st.draftId,file.name,file.type||'application/octet-stream',b64,prev));
+    const rec={id:r.id,name:r.name,size:r.size};
+    if(f.multiple){ const a=(getP(path)||[]).slice(); a.push(rec); setP(path,a);} else setP(path,rec);
+    delete st.uploading[key]; changed(); flush();
+  }catch(e){ delete st.uploading[key]; st.errors[key]=S.uploadFail; }
+  render(true);
+}
+
+/* signature pad */
+function sigControl(f,path,id){
+  const box=h('div',{class:'sigbox'}); const c=h('canvas',{id,role:'img','aria-label':tr(S.signHere)}); box.append(h('div',{class:'line'}),c);
+  let ctx,drawing=false,last=null,dirtySig=false;
+  const fit=()=>{ const r=c.getBoundingClientRect(); if(!r.width) return; const dpr=window.devicePixelRatio||1; c.width=r.width*dpr; c.height=r.height*dpr; ctx=c.getContext('2d'); ctx.scale(dpr,dpr); ctx.lineWidth=2.4; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#1d1d4f';
+    const v=getP(path); if(v){ const img=new Image(); img.onload=()=>ctx.drawImage(img,0,0,r.width,r.height); img.src=v; } };
+  requestAnimationFrame(fit);
+  const pos=e=>{const r=c.getBoundingClientRect(); return {x:e.clientX-r.left,y:e.clientY-r.top};};
+  c.addEventListener('pointerdown',e=>{ if(!ctx) fit(); drawing=true; last=pos(e); c.setPointerCapture(e.pointerId); ctx.beginPath(); ctx.arc(last.x,last.y,1.1,0,Math.PI*2); ctx.fillStyle='#1d1d4f'; ctx.fill(); dirtySig=true; });
+  c.addEventListener('pointermove',e=>{ if(!drawing) return; const p=pos(e); ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke(); last=p; });
+  const end=()=>{ if(!drawing) return; drawing=false; if(dirtySig){ setP(path,c.toDataURL('image/png')); clearErr(path,boxOf(c)); changed(); } };
+  c.addEventListener('pointerup',end); c.addEventListener('pointercancel',end); c.addEventListener('pointerleave',end);
+  const clear=h('button',{type:'button',class:'linkbtn',onclick:()=>{ setP(path,null); changed(); render(true); }},tr(S.clearSig));
+  return h('div',null,box,h('div',{style:'margin-top:4px'},clear));
+}
+
+/* ---------- review & summary ---------- */
+function optLabel(f,val,lang){ const o=(f.options||[]).find(x=>x.v===val); return o?(o[lang]||o.en):val; }
+function display(f,v,lang){
+  if(isEmpty(f,v)) return '';
+  switch(f.type){
+    case 'name': return [v.first,v.last].filter(Boolean).join(' ').trim();
+    case 'address': return [v.line1,v.line2,v.city,v.state,v.zip,v.country].map(x=>String(x||'').trim()).filter(Boolean).join(', ');
+    case 'radio': case 'select': return optLabel(f,v,lang);
+    case 'checks': return v.map(x=>optLabel(f,x,lang)).join('; ');
+    case 'file': return (f.multiple?v:[v]).map(x=>x.name).join('; ');
+    case 'signature': return lang==='pt'?'Assinado':'Signed';
+    default: return String(v).trim();
+  }
+}
+function collect(lang){
+  const L=o=>o==null?'':(typeof o==='string'?o:(o[lang]||o.en));
+  return F.steps.map((s,si)=>{
+    const rows=[];
+    s.fields.forEach(f=>{
+      if(f.type==='info'||!visible(f)) return;
+      const num=f.__n?f.__n+'. ':'';
+      if(f.type==='group'){ (st.answers[f.id]||[]).forEach((it,ix)=>f.fields.forEach(sf=>{
+          const v=it&&it[sf.id]; rows.push({label:`${num}${L(f.item)} ${ix+1} › ${L(sf.label)}`,value:display(sf,v,lang),files:sf.type==='file'&&v?(sf.multiple?v:[v]).filter(x=>x&&x.id):null}); }));
+        return; }
+      const v=st.answers[f.id];
+      rows.push({label:num+(f.sub?L(f.label)+' ('+(lang==='pt'?'detalhes':'details')+')':L(f.label)),value:display(f,v,lang),files:f.type==='file'&&v?(f.multiple?v:[v]).filter(x=>x&&x.id):null,sig:f.type==='signature'});
+    });
+    return {step:si,section:L(s.title),rows};
+  });
+}
+function reviewBlock(){
+  const wrap=h('div',{class:'review'});
+  wrap.append(h('p',{class:'intro',text:tr(S.reviewIntro)}));
+  collect(st.lang).slice(0,-1).forEach(sec=>{
+    const dl=h('dl');
+    sec.rows.forEach(r=>{ dl.append(h('dt',{text:r.label})); dl.append(h('dd',{class:r.value?null:'empty',text:r.value||tr(S.notAnswered)})); });
+    wrap.append(h('section',null,h('div',{class:'rh'},h('h3',{text:sec.section}),h('button',{type:'button',class:'linkbtn',onclick:()=>goto(sec.step)},tr(S.edit))),dl));
+  });
+  return h('div',{class:'info',style:'margin:16px 0 6px;background:rgba(255,255,255,.3)'},h('h3',{style:'margin:0 0 4px;font-size:18px',text:tr(S.reviewTitle)}),wrap);
+}
+
+/* ---------- navigation ---------- */
+function goto(i){
+  if(i===st.step) return;
+  st.errors={}; st.step=i; st.maxStep=Math.max(st.maxStep,i); changed(); flush(); render(); document.getElementById('card').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function showErrors(errs,top){
+  st.errors=Object.assign({__top:top||S.fixErrors},errs); render(true);
+  const first=document.querySelector('.q.bad'); if(first){ first.scrollIntoView({behavior:'smooth',block:'center'}); const inp=first.querySelector('input:not([type=file]),textarea,select'); if(inp) setTimeout(()=>inp.focus({preventScroll:true}),350); }
+}
+function next(){
+  const errs=validateStep(st.step);
+  if(Object.keys(errs).length){ showErrors(errs); return; }
+  st.errors={}; st.step++; st.maxStep=Math.max(st.maxStep,st.step); changed(); flush(); render(); window.scrollTo({top:0,behavior:'smooth'});
+}
+async function submit(){
+  if(Object.keys(st.uploading).length){ toast(tr(S.needSave)); return; }
+  for(let i=0;i<F.steps.length;i++){ const errs=validateStep(i); if(Object.keys(errs).length){
+      const top=i===F.steps.length-1?S.fixErrors:{en:S.stepErrors.en.replace('{s}',F.steps[i].title.en),pt:S.stepErrors.pt.replace('{s}',F.steps[i].title.pt)};
+      if(i!==st.step){ st.step=i; flush(); window.scrollTo(0,0); }
+      showErrors(errs,top);
+      return; } }
+  const btn=document.getElementById('submitbtn'); if(btn){ btn.disabled=true; btn.textContent=tr(S.submitting); }
+  if(!LIVE){ await new Promise(r=>setTimeout(r,600)); finish(); return; }
+  try{
+    ensureDraft();
+    const payload={answers:st.answers,summary:collect('en'),meta:meta(),lang:st.lang};
+    const r=await call('submitForm',FID,st.draftId,JSON.stringify(payload));
+    if(r&&r.ok) finish(); else throw new Error('fail');
+  }catch(e){ if(btn){ btn.disabled=false; btn.textContent=tr(S.submit);} toast(tr(S.submitErr)); }
+}
+function finish(){
+  st.done=true; clearTimeout(tServer); clearTimeout(tLocal); dirty=false;
+  try{localStorage.removeItem(KEY);}catch(e){}
+  if(LIVE) setUrl({form:FID});
+  render(); window.scrollTo(0,0);
+}
+function resetAll(){
+  try{localStorage.removeItem(KEY);}catch(e){}
+  Object.assign(st,{step:0,maxStep:0,answers:{},draftId:null,updatedAt:0,errors:{},uploading:{},submitted:false,done:false});
+  if(LIVE) setUrl({form:FID});
+  setSave('idle'); render(); window.scrollTo(0,0);
+}
+
+/* ---------- modals ---------- */
+function modal(build){ const ov=h('div',{class:'overlay',onclick:e=>{ if(e.target===ov) ov.remove(); }}); const m=h('div',{class:'modal',role:'dialog','aria-modal':'true'}); ov.append(m); build(m,()=>ov.remove()); document.body.append(ov); const fx=m.querySelector('input,button'); if(fx) fx.focus(); document.addEventListener('keydown',function esc(e){ if(e.key==='Escape'){ ov.remove(); document.removeEventListener('keydown',esc);} }); }
+function openLater(){
+  flush();
+  modal((m,close)=>{
+    m.append(h('h3',{text:tr(S.laterTitle)}),h('p',{text:tr(S.laterText)}));
+    if(LIVE&&appUrl){
+      ensureDraft(); flush();
+      const link=`${appUrl}?form=${FID}&draft=${st.draftId}`;
+      const inp=h('input',{type:'text',readonly:true,value:link,'aria-label':'Link',onfocus:e=>e.target.select()});
+      m.append(h('div',{class:'row'},inp,h('button',{class:'btn ink',type:'button',onclick:()=>{ const done=()=>toast(tr(S.copied)); if(navigator.clipboard) navigator.clipboard.writeText(link).then(done,()=>{inp.select();document.execCommand('copy');done();}); else {inp.select();document.execCommand('copy');done();} }},tr(S.copy))));
+      m.append(h('p',{class:'note',text:tr(S.laterPrivate)}));
+      const em=h('input',{type:'email',placeholder:'email@exemplo.com',value:meta().email||'','aria-label':'Email'});
+      const msg=h('p',{class:'note'});
+      const send=h('button',{class:'btn white',type:'button',onclick:async()=>{
+        const e=em.value.trim(); if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e)){ msg.textContent=tr(S.badEmail); return; }
+        send.disabled=true; try{ await call('emailResumeLink',FID,st.draftId,e,st.lang,GAS?'':pageUrl()); msg.textContent=fmt(S.emailSent,{e}); }catch(err){ msg.textContent=tr(S.emailFail); send.disabled=false; } }},tr(S.sendEmail));
+      m.append(h('p',{style:'margin-top:6px',text:tr(S.emailLink)}),h('div',{class:'row'},em,send),msg);
+    } else m.append(h('p',{class:'note',text:tr(S.previewLink)}));
+    m.append(h('div',{class:'acts'},h('button',{class:'btn ink',type:'button',onclick:close},tr(S.close))));
+  });
+}
+function confirmStartOver(){
+  modal((m,close)=>{ m.append(h('h3',{text:tr(S.startOver)}),h('p',{text:tr(S.startOverQ)}),
+    h('div',{class:'acts'},h('button',{class:'btn white',type:'button',onclick:close},tr(S.cancel)),h('button',{class:'btn ink',type:'button',onclick:()=>{close(); resetAll();}},tr(S.startOverYes)))); });
+}
+
+/* ---------- boot ---------- */
+function chooser(){
+  st.lang=(navigator.language||'pt').toLowerCase().startsWith('en')?'en':'pt';
+  const draw=()=>{ $app.innerHTML='';
+    $app.append(h('div',{class:'topbar'},h('div',{class:'brand'},'Trip Study ',h('span',null,'· Gold Coast')),
+      h('div',{class:'lang',role:'group','aria-label':'Language / Idioma'},
+        h('button',{type:'button','aria-pressed':String(st.lang==='en'),onclick:()=>{st.lang='en';draw();}},'English'),
+        h('button',{type:'button','aria-pressed':String(st.lang==='pt'),onclick:()=>{st.lang='pt';draw();}},'Português'))));
+    $app.append(h('h1',{text:tr(T('Student forms','Formulários do estudante'))}),h('p',{class:'lead',text:tr(T('Choose the form your consultant asked you to fill in.','Escolha o formulário que seu consultor pediu para você preencher.'))}));
+    const card=h('div',{class:'card'});
+    Object.keys(FORMS).forEach((k,i)=>card.append(h('div',{class:'q'+(i?'':' first')},h('span',{class:'lbl',text:tr(FORMS[k].title)}),h('p',{class:'help',text:tr(FORMS[k].lead)}),
+      h('a',{class:'btn white',href:'?form='+k,style:'justify-self:start;text-decoration:none'},tr(T('Open','Abrir'))+' →'))));
+    $app.append(card); };
+  draw();
+}
+function parseQuery(){ const o={}; new URLSearchParams(location.search).forEach((v,k)=>o[k]=v); if(location.hash.length>1) o.form=location.hash.slice(1); return o; }
+async function boot(){
+  const loc=GAS?await new Promise(r=>{ try{ google.script.url.getLocation(r);}catch(e){ r({parameter:{}}); } }):{parameter:parseQuery()};
+  const p=(loc&&loc.parameter)||{};
+  if(!GAS&&!window.FORCE_FORM&&!FORMS[p.form]){ chooser(); return; }
+  FID=window.FORCE_FORM||p.form||'visa'; if(!FORMS[FID]) FID='visa';
+  F=FORMS[FID]; numberForm(); KEY='tripstudy_form_'+FID;
+  if(GAS) call('getAppUrl').then(u=>{appUrl=u;}).catch(()=>{}); else if(LIVE) appUrl=pageUrl();
+  const local=readLocal();
+  st.lang=(local&&local.lang)||((navigator.language||'pt').toLowerCase().startsWith('en')?'en':'pt');
+  document.documentElement.lang=st.lang==='pt'?'pt-BR':'en';
+  let src=null;
+  const draft=/^[A-Za-z0-9]{16,40}$/.test(p.draft||'')?p.draft:null;
+  if(LIVE&&draft){
+    $app.innerHTML=''; $app.append(header());
+    try{ const r=JSON.parse(await call('getDraft',FID,draft)||'null');
+      if(r&&r.submitted){ st.submitted=true; render(); return; }
+      if(r&&r.data){ src=Object.assign({},r.data,{draftId:draft}); }
+    }catch(e){}
+    if(local&&local.draftId===draft&&(!src||(local.updatedAt||0)>(src.updatedAt||0))) src=local;
+    if(!src) src={draftId:draft};
+  } else if(local&&local.answers){ src=local; }
+  let restored=false;
+  if(src){ st.answers=src.answers||{}; st.step=Math.min(src.step||0,F.steps.length-1); st.maxStep=Math.max(src.maxStep||0,st.step); st.draftId=src.draftId||null; st.updatedAt=src.updatedAt||0; restored=Object.keys(st.answers).length>0; }
+  if(LIVE&&st.draftId) setUrl({form:FID,draft:st.draftId});
+  render();
+  if(restored){ toast(tr(S.restored)); setSave(LIVE?'ok':'local'); saveState.t=st.updatedAt||Date.now(); paintStatus(); }
+}
+boot();
+})();
+</script>
+</body>
+</html>
