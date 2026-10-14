@@ -399,7 +399,8 @@ const S={
   choose:T('Choose…','Escolha…'),chooseFile:T('Choose file','Escolher arquivo'),addFile:T('Add file','Adicionar arquivo'),replaceFile:T('Replace','Trocar'),
   uploading:T('Uploading…','Enviando arquivo…'),uploadFail:T('The file could not be uploaded. Check your connection and try again.','Não foi possível enviar o arquivo. Verifique sua internet e tente de novo.'),
   tooBig:T('This file is larger than 10 MB. Send a smaller file or a photo/PDF with lower resolution.','Este arquivo tem mais de 10 MB. Envie um arquivo menor ou uma foto/PDF com resolução menor.'),
-  fileTypes:T('PDF, image or document · up to 10 MB','PDF, imagem ou documento · até 10 MB'),
+  fileTypes:T('PDF, photo or document · up to 10 MB','PDF, foto ou documento · até 10 MB'),
+  blockedFile:T('Program and installer files are not accepted. Send a PDF, photo or document.','Arquivos de programas e instaladores não são aceitos. Envie um PDF, foto ou documento.'),
   remove:T('Remove','Remover'),removeQ:T('Remove','Remover'),
   clearSig:T('Clear signature','Limpar assinatura'),signHere:T('Sign here','Assine aqui'),
   saving:T('Saving…','Salvando…'),saved:T('Saved at {t}','Salvo às {t}'),savedLocal:T('Saved on this device at {t}','Salvo neste aparelho às {t}'),
@@ -443,6 +444,9 @@ const API_URL='https://script.google.com/macros/s/AKfycbzod3K02fao6ucEf4Ix2dCTZ8
 const GAS=!!(window.google&&google.script&&google.script.run);
 const LIVE=GAS||(!!API_URL&&/^https?:$/.test(location.protocol)&&!window.FORCE_FORM);
 const MAX_FILE=10*1024*1024;
+/* program/installer/script files are refused (risk of viruses); everything else is accepted */
+const BLOCKED_EXT=/\.(exe|msi|msp|bat|cmd|com|scr|pif|cpl|dll|sys|vbs|vbe|js|jse|mjs|wsf|wsh|ps1|psm1|psd1|hta|lnk|reg|inf|jar|apk|aab|xapk|ipa|app|dmg|pkg|mpkg|deb|rpm|sh|bash|run|bin|command|appx|appxbundle|msix|msixbundle|gadget|msc|scf|iso|img|vhd|vhdx)$/i;
+const isBlocked=f=>BLOCKED_EXT.test(f.name||'');
 let FID='visa',F=null,KEY='';
 const st={lang:'pt',step:0,maxStep:0,answers:{},draftId:null,updatedAt:0,errors:{},uploading:{},submitted:false,done:false};
 let appUrl='';
@@ -714,7 +718,7 @@ function purgeGroupErrors(gid){ Object.keys(st.errors).forEach(k=>{ if(k.startsW
 function fileControl(f,path,id){
   const key=pkey(path); const v=getP(path); const list=f.multiple?(Array.isArray(v)?v:[]):(v&&(v.id||v.name)?[v]:[]);
   const wrap=h('div',{class:'file'});
-  const input=h('input',{type:'file',id,class:'sr',accept:'image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.heic',onchange:e=>{const fl=e.target.files&&e.target.files[0]; e.target.value=''; if(fl) upload(f,path,fl);}});
+  const input=h('input',{type:'file',id,class:'sr',onchange:e=>{const fl=e.target.files&&e.target.files[0]; e.target.value=''; if(fl) upload(f,path,fl);}});
   list.forEach((it,ix)=>wrap.append(h('span',{class:'chip'},h('span',{title:it.name},'📎 '+it.name),
     h('button',{type:'button','aria-label':tr(S.remove)+' '+it.name,onclick:()=>{ if(f.multiple){const a=(getP(path)||[]).slice(); a.splice(ix,1); setP(path,a);} else setP(path,null); changed(); render(true);}},'×'))));
   if(st.uploading[key]) wrap.append(h('span',{class:'note'},tr(S.uploading)));
@@ -726,6 +730,7 @@ function fileControl(f,path,id){
 function readB64(file){return new Promise((res,rej)=>{const r=new FileReader(); r.onload=()=>res(String(r.result).split(',')[1]||''); r.onerror=rej; r.readAsDataURL(file);});}
 async function upload(f,path,file){
   const key=pkey(path);
+  if(isBlocked(file)){ st.errors[key]=S.blockedFile; render(true); return; }
   if(file.size>MAX_FILE){ st.errors[key]=S.tooBig; render(true); return; }
   delete st.errors[key];
   if(!LIVE){ const rec={name:file.name,size:file.size}; if(f.multiple){ const a=(getP(path)||[]).slice(); a.push(rec); setP(path,a);} else setP(path,rec); changed(); render(true); return; }
@@ -959,7 +964,8 @@ const DS={
   sending:T('Sending…','Enviando…'),
   linkSentTo:T('Done! We sent your personal link to {e}. Check your inbox (and spam).','Pronto! Mandamos o seu link pessoal para {e}. Confira sua caixa de entrada (e o spam).'),
   myLinkHelp:T('Your personal link reopens this checklist on any device.','O link pessoal abre este checklist de novo em qualquer aparelho.'),
-  pdfNote:T('PDF only · up to 20 MB','Somente PDF · até 20 MB')
+  pdfNote:T('Preferably PDF (photos and Word files are also accepted) · up to 20 MB','De preferência em PDF (fotos e Word também são aceitos) · até 20 MB'),
+  blocked:T('"{f}" cannot be sent: program and installer files are not accepted.','"{f}" não pode ser enviado: arquivos de programas e instaladores não são aceitos.')
 };
 const DOC_MAX=20*1024*1024;
 let D=null, dUp={}, DKEY='tripstudy_docs';
@@ -1028,7 +1034,7 @@ function docsTopic(t){
     if(it.guide) box.append(h('div',{class:'info',style:'margin-top:4px',html:tr(it.guide)}));
     const row=h('div',{class:'file'});
     files.forEach(f=>row.append(h('span',{class:'chip'},h('span',{title:f.name},'📎 '+f.name),h('button',{type:'button','aria-label':tr(S.remove)+' '+f.name,onclick:()=>docsRemove(f)},'×'))));
-    const input=h('input',{type:'file',id,class:'sr',multiple:true,accept:'application/pdf,.pdf',onchange:e=>{const fl=[...(e.target.files||[])]; e.target.value=''; if(fl.length) docsUpload(it,fl);}});
+    const input=h('input',{type:'file',id,class:'sr',multiple:true,onchange:e=>{const fl=[...(e.target.files||[])]; e.target.value=''; if(fl.length) docsUpload(it,fl);}});
     if(dUp[it.k]) row.append(h('span',{class:'note',text:dUp[it.k]}));
     else row.append(h('label',{class:'btn soft',for:id,tabindex:'0',onkeydown:e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click();}}},files.length?tr(DS.attachMore):tr(DS.attach)));
     row.append(input); box.append(row); box.append(h('div',{class:'note',text:tr(DS.pdfNote)}));
@@ -1045,7 +1051,7 @@ function docsNav(){
 }
 async function docsUpload(it,files){
   for(const file of files){
-    if(!(/pdf/i.test(file.type)||/\.pdf$/i.test(file.name))){ toast(fmt(DS.pdfOnly,{f:file.name})); continue; }
+    if(isBlocked(file)){ toast(fmt(DS.blocked,{f:file.name})); continue; }
     if(file.size>DOC_MAX){ toast(fmt(DS.tooBig,{f:file.name})); continue; }
     dUp[it.k]=fmt(DS.uploading,{f:file.name}); docsRender();
     try{
