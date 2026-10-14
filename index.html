@@ -523,7 +523,7 @@ let tLocal=null,tServer=null,dirty=false,saving=false,saveState={k:'idle'};
 function snapshot(){return {answers:st.answers,step:st.step,maxStep:st.maxStep,draftId:st.draftId,updatedAt:st.updatedAt,lang:st.lang};}
 function meta(){ const m=F.meta,a=st.answers; const nm=a[m.name]; const name=typeof nm==='object'&&nm?[nm.first,nm.last].filter(Boolean).join(' '):(nm||'');
   return {name:name.trim(),email:String(a[m.email]||'').trim(),phone:m.phone?String(a[m.phone]||''):'',step:`${st.step+1}/${F.steps.length} – ${F.steps[st.step].title.pt}`,pageUrl:GAS?'':pageUrl()}; }
-function saveLocal(){ try{localStorage.setItem(KEY,JSON.stringify(snapshot()));}catch(e){} if(!LIVE) setSave('local'); }
+function saveLocal(){ if(st.done||st.submitted) return; try{localStorage.setItem(KEY,JSON.stringify(snapshot()));}catch(e){} if(!LIVE) setSave('local'); }
 function readLocal(){ try{const r=localStorage.getItem(KEY); return r?JSON.parse(r):null;}catch(e){return null;} }
 function ensureDraft(){ if(!st.draftId){ st.draftId=rid(24); if(LIVE) setUrl({form:FID,draft:st.draftId}); } }
 function changed(){
