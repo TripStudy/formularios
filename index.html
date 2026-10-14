@@ -592,7 +592,8 @@ function progress(){
     h('div',{class:'meta'},h('span',null,`${tr(S.step)} ${st.step+1} ${tr(S.of)} ${n}`),h('span',{text:tr(F.steps[st.step].title)})),
     h('div',{class:'bar'},h('i',{style:`width:${Math.max(pct,3)}%`})));
   const steps=h('div',{class:'steps',role:'navigation'});
-  F.steps.forEach((s,i)=>steps.append(h('button',{type:'button',class:i===st.step?'cur':(i<=st.maxStep?'done':''),disabled:i>st.maxStep,'aria-current':i===st.step?'step':null,onclick:()=>goto(i)},`${i+1}. ${tr(s.title)}`)));
+  F.steps.forEach((s,i)=>{ const ok=i!==st.step&&i<=st.maxStep&&!Object.keys(validateStep(i)).length;
+    steps.append(h('button',{type:'button',class:i===st.step?'cur':(ok?'done':''),'aria-current':i===st.step?'step':null,onclick:()=>goto(i)},`${ok?'✓ ':''}${i+1}. ${tr(s.title)}`)); });
   box.append(steps);
   setTimeout(()=>{const c=steps.querySelector('.cur'); if(c){ const a=c.getBoundingClientRect(),b=steps.getBoundingClientRect(); steps.scrollLeft+=Math.max(-steps.scrollLeft,(a.left-b.left)-(b.width-a.width)/2);} },0);
   return box;
