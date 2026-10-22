@@ -93,6 +93,10 @@ input:focus,textarea:focus,select:focus{outline:3px solid rgba(255,255,255,.75);
 .chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .chip button{border:0;background:var(--blush);border-radius:50%;width:22px;height:22px;cursor:pointer;color:var(--ink);font-weight:900;flex:0 0 auto}
 .note{font-size:13.5px;color:var(--ink-soft)}
+.q.import{background:var(--blush);border-radius:12px;padding:16px 18px 18px;border-top:0;margin-top:4px}
+.q.import .lbl{font-size:17px}
+.q.import .imported{background:var(--paper);border-radius:8px;padding:8px 12px;font-size:14.5px;color:var(--ok);font-weight:700}
+.q.import .btn.soft{background:var(--ink);color:#fff}
 .sigbox{background:var(--paper);border:1.5px solid var(--paper);border-radius:10px;position:relative}
 .sigbox canvas{display:block;width:100%;height:190px;touch-action:none;cursor:crosshair}
 .sigbox .line{position:absolute;left:18px;right:18px;bottom:42px;border-bottom:1.5px dashed #C9A89B;pointer-events:none}
@@ -167,6 +171,8 @@ visa:{
   meta:{name:'full_name',email:'email',phone:'au_phone'},
   steps:[
   {id:'personal',title:T('Personal details','Dados pessoais'),fields:[
+    {id:'previous_application',type:'file',importPdf:true,nonum:true,label:T('Have you applied for an Australian visa before? Attach your previous application','Já aplicou para visto australiano antes? Anexe a sua aplicação anterior'),
+     help:T('Attach the PDF of your previous application ("Application for a Student Visa – Record of Responses", which you received from Trip Study or can download from ImmiAccount). We fill in this form with the information in it, so you only need to check each step and update what has changed.','Anexe o PDF da sua aplicação anterior ("Application for a Student Visa – Record of Responses", que você recebeu da Trip Study ou pode baixar no ImmiAccount). Nós preenchemos este formulário com as informações dela: depois é só conferir cada etapa e atualizar o que mudou.')},
     {id:'current_location',type:'text',required:true,label:T("Applicant's current location (country)",'País onde você mora agora'),help:T('The country you are living in at the time of this visa application.','Em que país você está morando no momento da aplicação deste visto?'),ph:T('E.g.: Australia','Ex.: Austrália')},
     {id:'full_name',type:'name',required:true,label:T('Full name (as in your passport)','Nome completo (como no passaporte)')},
     {id:'sex',type:'radio',required:true,options:SEX,label:T('Sex','Sexo')},
@@ -432,7 +438,19 @@ const S={
   alreadyText:T('These answers were already submitted to Trip Study.','Estas respostas já foram enviadas para a Trip Study.'),
   submitErr:T('We could not send the form. Your answers are safe. Check your internet and try again.','Não foi possível enviar o formulário. Suas respostas estão salvas. Verifique sua internet e tente de novo.'),
   needSave:T('Wait for the files to finish uploading.','Aguarde os arquivos terminarem de enviar.'),
-  item:T('Item','Item')
+  item:T('Item','Item'),
+  /* previous application import */
+  importPdfOnly:T('Attach the PDF of the application (not a photo or screenshot).','Anexe o PDF da aplicação (não uma foto ou print).'),
+  importFileTypes:T('PDF · up to 10 MB','PDF · até 10 MB'),
+  importReading:T('Reading your previous application…','Lendo a sua aplicação anterior…'),
+  importDone:T('✓ {n} answers filled in from {f}. Check each step and update what has changed.','✓ {n} respostas preenchidas a partir de {f}. Confira cada etapa e atualize o que mudou.'),
+  importToast:T('{n} answers filled in. Check each step and update what has changed.','{n} respostas preenchidas. Confira cada etapa e atualize o que mudou.'),
+  importNotApp:T('We could not find application data in this PDF. Check that it is the "Application for a Student Visa – Record of Responses" file. The file was attached anyway.','Não encontramos dados de aplicação neste PDF. Confira se é o arquivo "Application for a Student Visa – Record of Responses". O arquivo ficou anexado mesmo assim.'),
+  importFail:T('We could not read this PDF automatically. The file was attached; please fill in the form normally.','Não conseguimos ler este PDF automaticamente. O arquivo ficou anexado; preencha o formulário normalmente.'),
+  importAskTitle:T('Fill in with your previous application?','Preencher com a aplicação anterior?'),
+  importAskText:T('We found {n} answers in {f}. Some questions in this form are already answered. How do you want to use the data from the PDF?','Encontramos {n} respostas em {f}. Algumas perguntas deste formulário já estão respondidas. Como você quer usar os dados do PDF?'),
+  importFillBlank:T('Fill in only the blank ones','Preencher só o que está em branco'),
+  importReplace:T('Replace with the PDF data','Substituir pelos dados do PDF')
 };
 
 /* ================================================================
@@ -448,7 +466,7 @@ const MAX_FILE=10*1024*1024;
 const BLOCKED_EXT=/\.(exe|msi|msp|bat|cmd|com|scr|pif|cpl|dll|sys|vbs|vbe|js|jse|mjs|wsf|wsh|ps1|psm1|psd1|hta|lnk|reg|inf|jar|apk|aab|xapk|ipa|app|dmg|pkg|mpkg|deb|rpm|sh|bash|run|bin|command|appx|appxbundle|msix|msixbundle|gadget|msc|scf|iso|img|vhd|vhdx)$/i;
 const isBlocked=f=>BLOCKED_EXT.test(f.name||'');
 let FID='visa',F=null,KEY='';
-const st={lang:'pt',step:0,maxStep:0,answers:{},draftId:null,updatedAt:0,errors:{},uploading:{},submitted:false,done:false};
+const st={lang:'pt',step:0,maxStep:0,answers:{},draftId:null,updatedAt:0,errors:{},uploading:{},submitted:false,done:false,importing:false,importInfo:null};
 let appUrl='';
 const $app=document.getElementById('app'),$nav=document.getElementById('nav');
 
@@ -481,7 +499,7 @@ function rid(n){const a='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz234567
 function nowTime(d){return new Date(d||Date.now()).toLocaleTimeString(st.lang==='pt'?'pt-BR':'en-AU',{hour:'2-digit',minute:'2-digit'});}
 
 /* numbering: every top-level question gets a stable number; follow-ups inherit it */
-function numberForm(){ let n=0; F.steps.forEach(s=>s.fields.forEach(f=>{ if(f.type==='info') return; if(f.sub) f.__n=n; else f.__n=++n; })); }
+function numberForm(){ let n=0; F.steps.forEach(s=>s.fields.forEach(f=>{ if(f.type==='info'||f.nonum) return; if(f.sub) f.__n=n; else f.__n=++n; })); }
 
 /* visibility */
 function visible(f){ const s=f.showIf; if(!s) return true; const v=st.answers[s.f];
@@ -631,7 +649,7 @@ function renderField(f,path,inGroup){
   if(f.type==='group') return renderGroup(f);
   const key=pkey(path); const id='f_'+key.replace(/\W/g,'_'); const v=getP(path);
   const err=st.errors[key];
-  const box=h('div',{class:'q'+(f.sub?' sub':'')+(err?' bad':''),'data-key':key});
+  const box=h('div',{class:'q'+(f.sub?' sub':'')+(f.importPdf?' import':'')+(err?' bad':''),'data-key':key});
   const isChoice=['radio','checks','name','address','file','signature'].includes(f.type);
   box.append(isChoice?h('div',{id:id+'_l'},labelEl(f,null,inGroup?null:undefined)):labelEl(f,id,inGroup?null:undefined));
   if(f.help) box.append(h('p',{class:'help',id:id+'_h',text:tr(f.help)}));
@@ -718,21 +736,26 @@ function purgeGroupErrors(gid){ Object.keys(st.errors).forEach(k=>{ if(k.startsW
 function fileControl(f,path,id){
   const key=pkey(path); const v=getP(path); const list=f.multiple?(Array.isArray(v)?v:[]):(v&&(v.id||v.name)?[v]:[]);
   const wrap=h('div',{class:'file'});
-  const input=h('input',{type:'file',id,class:'sr',onchange:e=>{const fl=e.target.files&&e.target.files[0]; e.target.value=''; if(fl) upload(f,path,fl);}});
+  const input=h('input',{type:'file',id,class:'sr',accept:f.importPdf?'application/pdf,.pdf':null,onchange:e=>{const fl=e.target.files&&e.target.files[0]; e.target.value=''; if(fl) upload(f,path,fl);}});
   list.forEach((it,ix)=>wrap.append(h('span',{class:'chip'},h('span',{title:it.name},'📎 '+it.name),
-    h('button',{type:'button','aria-label':tr(S.remove)+' '+it.name,onclick:()=>{ if(f.multiple){const a=(getP(path)||[]).slice(); a.splice(ix,1); setP(path,a);} else setP(path,null); changed(); render(true);}},'×'))));
+    h('button',{type:'button','aria-label':tr(S.remove)+' '+it.name,onclick:()=>{ if(f.multiple){const a=(getP(path)||[]).slice(); a.splice(ix,1); setP(path,a);} else setP(path,null); if(f.importPdf) st.importInfo=null; changed(); render(true);}},'×'))));
   if(st.uploading[key]) wrap.append(h('span',{class:'note'},tr(S.uploading)));
   else if(f.multiple||!list.length) wrap.append(h('label',{class:'btn soft',for:id,tabindex:'0',onkeydown:e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click();}}},list.length?tr(S.addFile):tr(S.chooseFile)));
   else wrap.append(h('label',{class:'linkbtn',for:id,tabindex:'0',onkeydown:e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click();}}},tr(S.replaceFile)));
   wrap.append(input);
-  return h('div',null,wrap,h('div',{class:'note',style:'margin-top:6px'},tr(S.fileTypes)));
+  const out=h('div',null,wrap,h('div',{class:'note',style:'margin-top:6px'},tr(f.importPdf?S.importFileTypes:S.fileTypes)));
+  if(f.importPdf){ if(st.importing) out.append(h('div',{class:'note',style:'margin-top:8px',role:'status'},'⏳ '+tr(S.importReading)));
+    else if(st.importInfo) out.append(h('div',{class:'imported',style:'margin-top:8px',role:'status'},fmt(S.importDone,{n:st.importInfo.count,f:st.importInfo.name}))); }
+  return out;
 }
 function readB64(file){return new Promise((res,rej)=>{const r=new FileReader(); r.onload=()=>res(String(r.result).split(',')[1]||''); r.onerror=rej; r.readAsDataURL(file);});}
 async function upload(f,path,file){
   const key=pkey(path);
   if(isBlocked(file)){ st.errors[key]=S.blockedFile; render(true); return; }
   if(file.size>MAX_FILE){ st.errors[key]=S.tooBig; render(true); return; }
+  if(f.importPdf&&!(/\.pdf$/i.test(file.name)||file.type==='application/pdf')){ st.errors[key]=S.importPdfOnly; render(true); return; }
   delete st.errors[key];
+  if(f.importPdf) importPrevApp(file); /* reads the PDF here in the browser, in parallel with the upload */
   if(!LIVE){ const rec={name:file.name,size:file.size}; if(f.multiple){ const a=(getP(path)||[]).slice(); a.push(rec); setP(path,a);} else setP(path,rec); changed(); render(true); return; }
   ensureDraft(); st.uploading[key]=true; render(true);
   try{
@@ -745,6 +768,404 @@ async function upload(f,path,file){
   }catch(e){ delete st.uploading[key]; st.errors[key]=S.uploadFail; }
   render(true);
 }
+
+/* ---------- previous application import (Home Affairs "Record of Responses" PDF) ---------- */
+/* pdf.js lives in lib/ (vendored, Apache 2.0) and is loaded only when a student attaches the PDF */
+let pdfLib=null;
+async function loadPdfJs(){
+  if(pdfLib) return pdfLib;
+  const base=new URL('lib/',pageUrl()).href;
+  const m=await import(base+'pdfjs.min.js');
+  m.GlobalWorkerOptions.workerSrc=base+'pdfjs.worker.min.js';
+  pdfLib=m; return m;
+}
+const emptyAnswer=v=>v==null||v===''||(Array.isArray(v)&&!v.some(x=>!emptyAnswer(x)))||(typeof v==='object'&&!Array.isArray(v)&&!Object.values(v).some(x=>!emptyAnswer(x)));
+function hasAnswers(){ return Object.keys(st.answers).some(k=>k!=='previous_application'&&!emptyAnswer(st.answers[k])); }
+async function importPrevApp(file){
+  st.importing=true; st.importInfo=null; render(true);
+  let parsed=null;
+  try{
+    const pdfjs=await loadPdfJs();
+    const doc=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+    const pages=[];
+    for(let p=1;p<=doc.numPages;p++){ const pg=await doc.getPage(p); const tc=await pg.getTextContent(); pages.push(tc.items); }
+    try{ doc.destroy(); }catch(e){}
+    parsed=PrevApp.parse(PrevApp.rowsFromPages(pages));
+  }catch(e){ st.importing=false; render(true); toast(tr(S.importFail)); return; }
+  st.importing=false;
+  if(!parsed||!parsed.ok){ render(true); toast(tr(S.importNotApp)); return; }
+  const apply=mode=>{
+    let n=0;
+    if(mode==='replace') PrevApp.FIELDS.forEach(k=>{ if(!(k in parsed.answers)) delete st.answers[k]; });
+    Object.keys(parsed.answers).forEach(k=>{ if(mode==='fill'&&!emptyAnswer(st.answers[k])) return; st.answers[k]=parsed.answers[k]; n++; });
+    purgeAllErrors(); st.importInfo={count:parsed.count,name:file.name}; st.maxStep=F.steps.length-1;
+    changed(); flush(); render(true); toast(fmt(S.importToast,{n:parsed.count}));
+  };
+  if(!hasAnswers()){ apply('replace'); return; }
+  render(true);
+  modal((m,close)=>{ m.append(h('h3',{text:tr(S.importAskTitle)}),h('p',{text:fmt(S.importAskText,{n:parsed.count,f:file.name})}),
+    h('div',{class:'acts'},h('button',{class:'btn white',type:'button',onclick:close},tr(S.cancel)),
+      h('button',{class:'btn white',type:'button',onclick:()=>{close(); apply('fill');}},tr(S.importFillBlank)),
+      h('button',{class:'btn ink',type:'button',onclick:()=>{close(); apply('replace');}},tr(S.importReplace)))); });
+}
+function purgeAllErrors(){ Object.keys(st.errors).forEach(k=>{ if(k!=='__top') delete st.errors[k]; }); delete st.errors.__top; }
+
+/* === PREV-APP-IMPORT: reads the Home Affairs "Record of Responses" PDF (previous student visa application)
+   and turns it into Visa Form answers. Pure functions, no DOM: PrevApp.rowsFromPages(pages) → PrevApp.parse(rows). === */
+const PrevApp=(function(){
+  'use strict';
+  const clean=s=>String(s||'').replace(/\s+/g,' ').trim();
+  const PARTICLES=new Set(['da','de','do','dos','das','e','em','para','por','com','di','del','della','van','von','der','den','la','le','y','of','the','and']);
+  /* "RIO GRANDE DO SUL" → "Rio Grande do Sul"; mixed-case text is left as it is */
+  function nice(s){ s=clean(s); if(!s||/[a-z]/.test(s)) return s;
+    if(/^[A-Z]{1,3}$/.test(s)) return s; /* a lone acronym: RS, SP, NSW */
+    return s.toLowerCase().split(' ').map((w,i)=>{ if(i&&PARTICLES.has(w)) return w; return w.replace(/(^|[-'(\/])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase()); }).join(' '); }
+  const country=s=>nice(clean(s).replace(/\s*-\s*[A-Z]{3}$/,''));
+  const MON={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,sept:9,oct:10,nov:11,dec:12};
+  const p2=n=>String(n).padStart(2,'0');
+  /* "23 Oct 1998" / "23/10/1998" → "23/10/1998"; otherwise '' */
+  function dmy(s){ s=clean(s); let m=/^(\d{1,2})\s+([A-Za-z]{3,})\.?\s+(\d{4})$/.exec(s); if(m&&MON[m[2].slice(0,3).toLowerCase()]) return p2(m[1])+'/'+p2(MON[m[2].slice(0,3).toLowerCase()])+'/'+m[3];
+    m=/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/.exec(s); if(m) return p2(m[1])+'/'+p2(m[2])+'/'+m[3]; return ''; }
+  /* "Nov 2017" / "23 Oct 1998" / "11/2017" → "11/2017"; otherwise '' */
+  function my(s){ s=clean(s); const d=dmy(s); if(d) return d.slice(3); let m=/^([A-Za-z]{3,})\.?\s+(\d{4})$/.exec(s); if(m&&MON[m[1].slice(0,3).toLowerCase()]) return p2(MON[m[1].slice(0,3).toLowerCase()])+'/'+m[2];
+    m=/^(\d{1,2})[\/.-](\d{4})$/.exec(s); if(m) return p2(m[1])+'/'+m[2]; return ''; }
+  const yes=a=>/^yes/i.test(clean(a)); const no=a=>/^no\b/i.test(clean(a));
+  const yn=a=>yes(a)?'Yes':no(a)?'No':'';
+  const fullName=p=>clean([p.given,p.family].filter(Boolean).join(' '));
+
+  /* ---------- 1. pdf.js text items → rows {l,r,lb,h} (left column / value column) ---------- */
+  const SKIP=/^(OFFICIAL: Sensitive|Personal Privacy|Application for a Student Visa|Department of Home Affairs|Record of( Responses)?|Responses|Generated: |Reference Number:|Page \d+ of \d+|This form submitted by|Role\(s\)|Submitted on|Organisation$)/;
+  function rowsFromPages(pages){
+    const items=[]; let pg=0;
+    for(const page of pages){ pg++;
+      for(const it of (page.items||page)){
+        if(!it||typeof it.str!=='string') continue; const str=clean(it.str); if(!str) continue;
+        const x=it.transform?it.transform[4]:it.x, y=it.transform?it.transform[5]:it.y;
+        items.push({str,x,y,w:it.width||0,h:it.height||0,font:it.fontName||'',pg});
+      } }
+    if(!items.length) return [];
+    /* value column: where the bold Yes/No answers sit (≈190pt); fonts: the answers' font is the bold one */
+    const ans=items.filter(i=>/^(Yes|No)$/.test(i.str)&&i.x>120);
+    const xs=ans.map(i=>i.x).sort((a,b)=>a-b); const VX=xs.length?xs[xs.length>>1]:189.8; const SPLIT=VX-14;
+    const bold={}; ans.forEach(i=>{bold[i.font]=(bold[i.font]||0)+1;}); const boldFont=Object.keys(bold).sort((a,b)=>bold[b]-bold[a])[0]||'';
+    const rows=[];
+    for(let p=1;p<=pg;p++){
+      const pi=items.filter(i=>i.pg===p&&i.h>=9.5).sort((a,b)=>b.y-a.y||a.x-b.x);
+      let cur=null;
+      for(const it of pi){
+        if(!cur||Math.abs(cur.y-it.y)>3){ cur={y:it.y,its:[],pg:p}; rows.push(cur); }
+        cur.its.push(it);
+      }
+    }
+    const out=[];
+    for(const r of rows){
+      r.its.sort((a,b)=>a.x-b.x);
+      const L=[],R=[]; let lb=false,h=0;
+      for(const it of r.its){ h=Math.max(h,it.h); if(it.x<SPLIT){ L.push(it.str); if(it.font===boldFont) lb=true; } else R.push(it.str); }
+      const l=clean(L.join(' ')), rr=clean(R.join(' '));
+      if(!l&&!rr) continue;
+      if(SKIP.test(l)||(!l&&SKIP.test(rr))) continue;
+      out.push({l,r:rr,lb:lb&&!!l,h,pg:r.pg});
+    }
+    return out;
+  }
+
+  /* ---------- 2. rows → tokens: {t:'h',h} headings · {t:'kv',k,v} label/value · {t:'q',q,a} question/answer ---------- */
+  function tokens(rows){
+    const T=[]; let L=[]; let last=null;
+    const cont=s=>/^[\p{Ll}(•]/u.test(s);
+    const flushNote=()=>{ L=[]; };
+    for(const r of rows){
+      if(r.l&&r.r){
+        let k=r.l; if(L.length){ if(cont(r.l)) k=clean(L.join(' ')+' '+r.l); L=[]; }
+        last={t:'kv',k:k.replace(/:$/,''),v:r.r}; T.push(last); continue; }
+      if(!r.l&&r.r){
+        if(L.length){ last={t:'q',q:clean(L.join(' ')).replace(/:$/,''),a:r.r}; T.push(last); L=[]; }
+        else if(last&&last.t==='kv') last.v=clean(last.v+' '+r.r)+''; /* wrapped value (addresses, texts) */
+        else if(last&&last.t==='q') last.a=clean(last.a+' '+r.r);
+        continue; }
+      /* left only */
+      if(r.lb&&!/[:?]$/.test(r.l)){ flushNote(); last={t:'h',h:r.l,big:r.h>=13.5}; T.push(last); continue; }
+      if(/^•/.test(r.l)){ if(!L.length&&last&&last.t==='kv'&&!last.v){ T.pop(); L=[last.k+':',r.l]; last=T[T.length-1]||null; } else L.push(r.l); continue; }
+      if(!L.length&&cont(r.l)&&last&&(last.t==='kv'||last.t==='q')){ if(last.t==='kv') last.k=clean(last.k+' '+r.l).replace(/[:?]$/,''); else last.q=clean(last.q+' '+r.l); continue; }
+      if(/:$/.test(r.l)){ flushNote(); last={t:'kv',k:r.l.replace(/:$/,''),v:''}; T.push(last); continue; }
+      L.push(r.l);
+    }
+    return T;
+  }
+
+  /* ---------- 3. tokens → structured data ---------- */
+  function extract(T){
+    const D={primary:{},members:[],nonacc:[],family:[],otherNames:[],contact:{res:{},post:{}},funds:{sponsor:{}},edu:{},eduHist:[],jobs:[],langs:[],trips:[],visa:{},q:{},details:{},ctx:{}};
+    let section='',sub='',owner='primary',lastQ=null,cur=null,block=null,langBlk=null;
+    const person=()=>{
+      if(owner==='primary') return D.primary;
+      if(owner==='member') return D.members[D.members.length-1];
+      if(owner==='nonacc') return D.nonacc[D.nonacc.length-1];
+      if(owner==='family') return D.family[D.family.length-1];
+      if(owner==='sponsor') return D.funds.sponsor;
+      if(owner==='job') return block&&block.contact;
+      return null; };
+    const kvPerson=(p,k,v)=>{
+      if(!p) return false;
+      switch(k){
+        case 'Family name': p.family=v; return true;
+        case 'Given names': p.given=v; return true;
+        case 'Sex': p.sex=v; return true;
+        case 'Date of birth': p.dob=v; return true;
+        case 'Passport number': p.passport=v; return true;
+        case 'Country of passport': p.passportCountry=v; return true;
+        case 'Nationality of passport holder': p.nationality=v; return true;
+        case 'Date of issue': p.issue=v; return true;
+        case 'Date of expiry': p.expiry=v; return true;
+        case 'Place of issue / issuing authority': case 'Place of issue': case 'Issuing authority': p.authority=v; return true;
+        case 'Town / City': p.city=v; return true;
+        case 'State / Province': p.state=v; return true;
+        case 'Country of birth': p.birthCountry=v; return true;
+        case 'Relationship status': p.relStatus=v; return true;
+        case 'Relationship to the primary applicant': case 'Relationship to the applicant': p.relation=v; return true;
+        case 'Usual country of residence': p.residence=v; return true;
+      }
+      return false; };
+    for(const t of T){
+      if(t.t==='h'){
+        const h=t.h;
+        if(t.big||/^(Migrating member of the family unit|Other family members|Non-accompanying members of the family unit|Education history details|Employment history details|Country visited|Language - |Financial support from an individual|Primary applicant|Contact details|Critical data confirmation|Funding for stay|Education|Employment|Countries visited|Visa history|Health declarations|Character declarations|Genuine)/i.test(h)){
+          section=h; sub='';
+          if(/^Primary applicant/i.test(h)) owner='primary';
+          else if(/^Migrating member/i.test(h)){ D.members.push({}); owner='member'; }
+          else if(/^Critical data confirmation/i.test(h)) owner='ignore';
+          else if(/^Non-accompanying/i.test(h)) owner='nonacc';
+          else if(/^Other family members/i.test(h)) owner='family';
+          else if(/^Financial support from an individual/i.test(h)) owner='sponsor';
+          else if(/^Education history details/i.test(h)){ block={}; D.eduHist.push(block); owner='none'; }
+          else if(/^Employment history details/i.test(h)){ block={contact:{},addr:{}}; D.jobs.push(block); owner='job'; }
+          else if(/^Country visited/i.test(h)){ block={}; D.trips.push(block); owner='none'; }
+          else if(/^Language - /i.test(h)){ langBlk={name:h.replace(/^Language - /i,'')}; D.langs.push(langBlk); owner='none'; }
+          else if(/^(Contact details|Funding for stay|Education|Employment|Countries visited|Visa history|Health declarations|Character declarations|Genuine|Health insurance|Future employment|Student declarations|Declarations|Australian values|Supporting evidence)/i.test(h)) owner='none';
+        } else sub=h;
+        continue;
+      }
+      if(t.t==='kv'){
+        const k=t.k, v=clean(t.v); if(!v) continue;
+        if(k==='Give details'||/^Give details/i.test(k)){ if(lastQ) lastQ.details=clean((lastQ.details?lastQ.details+' ':'')+v); continue; }
+        if(/^Application context/i.test(section)&&k==='Current location'){ D.ctx.location=v; continue; }
+        /* other names of the current person */
+        if(/other names/i.test(sub)&&(k==='Family name'||k==='Given names')){ const p=person(); if(p){ p.otherNames=p.otherNames||[]; const o=p.otherNames[p.otherNames.length-1]; if(k==='Family name'||!o||o.family) p.otherNames.push({[k==='Family name'?'family':'given']:v}); else o.given=v; } continue; }
+        /* relationship kv starts a new family / non-accompanying member */
+        if(/^Relationship to the (primary )?applicant$/.test(k)&&(owner==='family'||owner==='nonacc')){ const list=owner==='family'?D.family:D.nonacc; list.push({relation:v}); continue; }
+        if(owner==='sponsor'){ if(/^Relationship to the applicant$/.test(k)){ D.funds.rel=v; continue; } if(/^Other relationship$/.test(k)){ D.funds.otherRel=v; continue; } }
+        if(/^Contact details/i.test(section)){
+          const a=/^Postal address/i.test(sub)?D.contact.post:/^Residential address/i.test(sub)?D.contact.res:null;
+          if(a){ if(k==='Country') a.country=v; else if(k==='Address') a.address=v; else if(/^Suburb/.test(k)) a.city=v; else if(/^State/.test(k)) a.state=v; else if(/^Post/.test(k)) a.zip=v; continue; }
+          if(/^Contact telephone/i.test(sub)){ if(/Mobile/.test(k)) D.contact.mobile=v; else if(/Home/.test(k)) D.contact.home=v; else if(/Business/.test(k)) D.contact.business=v; continue; }
+          if(/^Email address/i.test(sub)&&k==='Email address'){ D.contact.email=v; continue; }
+          if(k==='Usual country of residence'){ D.contact.residence=v; continue; }
+          if(/^(Authorised|Education agent|Electronic)/i.test(sub)) continue;
+        }
+        if(/^Funding|^Financial support/i.test(section)){
+          if(/^Value in Australian dollars/i.test(k)) { D.funds.amount=v; continue; }
+          if(k==='Financial institution'){ D.funds.bank=v; continue; }
+          if(k==='Funding type'){ D.funds.type=v; continue; }
+        }
+        if(/^Education$/i.test(section)){
+          if(/^Highest level of schooling/i.test(k)){ D.edu.level=v; continue; }
+          if(k==='Course name'){ D.edu.course=v; continue; } if(k==='Institution name'){ D.edu.institution=v; continue; } if(k==='Country of institution'){ D.edu.country=v; continue; }
+        }
+        if(/^Education history details/i.test(section)&&block){
+          if(k==='Course name') block.course=v; else if(k==='Institution name') block.institution=v; else if(k==='Campus') block.campus=v; else if(/^Postcode/.test(k)) block.postcode=v;
+          else if(k==='Country of institution') block.country=v; else if(k==='Date from') block.from=v; else if(k==='Date to') block.to=v; else if(k==='Qualification') block.qual=v; else if(k==='Field of study') block.field=v;
+          continue; }
+        if(/^Employment history details/i.test(section)&&block){
+          if(k==='Employment status'){ block.status=v; continue; }
+          if(k==='Organisation name'){ block.company=v; continue; }
+          if(/^Organisation address/i.test(sub)){ const a=block.addr; if(k==='Country') a.country=v; else if(k==='Address') a.address=v; else if(/^Suburb/.test(k)) a.city=v; else if(/^State/.test(k)) a.state=v; else if(/^Post/.test(k)) a.zip=v; continue; }
+          if(/^Contact person/i.test(sub)){ if(/Business phone/.test(k)) block.contact.business=v; else if(/Mobile/.test(k)) block.contact.mobile=v; else kvPerson(block.contact,k,v); continue; }
+          if(k==='Position'){ block.position=v; continue; } if(k==='Date from'){ block.from=v; continue; } if(k==='Date to'){ block.to=v; continue; }
+          continue; }
+        if(/^Language - /i.test(section)&&langBlk){
+          if(k==='Main language'){ langBlk.main=v; continue; }
+          if(/test type|type of test|language test|name of test/i.test(k)){ langBlk.test=v; continue; }
+          if(/date/i.test(k)){ langBlk.testDate=v; continue; }
+          if(/reference|report/i.test(k)){ langBlk.testRef=v; continue; }
+          if(/country/i.test(k)){ langBlk.testCountry=v; continue; }
+          if(/overall|score|band/i.test(k)){ langBlk.testScore=v; continue; }
+          continue; }
+        if(/^Country visited/i.test(section)&&block){
+          if(k==='Name') block.name=v; else if(k==='Country') block.country=v; else if(k==='Date from') block.from=v; else if(k==='Date to') block.to=v; else if(/^Reason/.test(k)) block.reason=v;
+          continue; }
+        /* person details (primary, accompanying member, non-accompanying, family, sponsor) */
+        if(owner!=='ignore'&&owner!=='none'){ const p=person(); if(p&&kvPerson(p,k,v)) continue; }
+        continue;
+      }
+      if(t.t==='q'){
+        const q=t.q, a=clean(t.a); lastQ=t;
+        const Q=(re,key,holder)=>{ if(re.test(q)){ (holder||D.q)[key]=t; return true; } return false; };
+        const p=person();
+        if(owner!=='ignore'&&p&&(Q(/known by any other names/i,'otherNamesQ',p)||Q(/other current passports/i,'otherPassport',p)||Q(/health examination for an Australian visa/i,'healthExam',p))) continue;
+        if(Q(/accompanying members of the family unit included in this application/i,'accompanying')) continue;
+        if(Q(/Is the postal address the same as the residential address/i,'postalSame')) continue;
+        if(Q(/not already been included as an/i,'nonAcc')) continue;
+        if(Q(/parents or siblings in or outside Australia/i,'parentsSiblings')) continue;
+        if(Q(/access to sufficient funds/i,'fundsConfirm')) continue;
+        if(Q(/funds be provided by an individual other than the applicant/i,'fundsOther')) continue;
+        if(Q(/other studies or training outside Australia/i,'otherStudies')) continue;
+        if(Q(/previously studied in Australia/i,'studiedAu')) continue;
+        if(/current employment situation/i.test(q)&&/^Employment history details/i.test(section)&&block){ block.current=yes(a); continue; }
+        if(langBlk&&/^Language - /i.test(section)){
+          if(Q(/English language test within the last 24 months/i,'englishTest',langBlk)) continue;
+          if(Q(/five years study/i,'fiveYears',langBlk)) continue;
+          if(Q(/Senior Secondary Certificate/i,'seniorSecondary',langBlk)) continue;
+          if(Q(/Certificate IV or higher/i,'aqf',langBlk)) continue;
+          if(Q(/ELICOS/i,'elicos',langBlk)) continue; }
+        if(Q(/visited any countries in the past 10 years/i,'travelled')) continue;
+        if(Q(/held or currently hold a visa/i,'visasHeld')) continue;
+        if(Q(/not complied with visa conditions/i,'visaBreach')) continue;
+        if(Q(/refused, or had a visa cancelled/i,'visaRefused')) continue;
+        if(Q(/more than 3 consecutive months/i,'h_outside')) continue;
+        if(Q(/enter a hospital|health care facility \(including nursing/i,'h_hospital')) continue;
+        if(Q(/health care worker|doctor, dentist, nurse/i,'h_doctor')) continue;
+        if(Q(/child care centre/i,'h_childcare')) continue;
+        if(Q(/tuberculosis/i,'h_tb')) continue;
+        if(Q(/medical costs|medical follow/i,'h_costs')) continue;
+        if(Q(/assistance with mobility|ongoing medical care|special equipment|assistive technology/i,'h_mobility')) continue;
+        if(Q(/awaiting legal action/i,'c_charged')) continue;
+        if(Q(/convicted of an offence/i,'c_convicted')) continue;
+        if(Q(/domestic violence|family violence/i,'c_dv')) continue;
+        if(Q(/arrest warrant|Interpol/i,'c_warrant')) continue;
+        if(Q(/sexually based offence/i,'c_child')) continue;
+        if(Q(/sex offender register/i,'c_register')) continue;
+        if(Q(/unsoundness of mind|insanity/i,'c_insanity')) continue;
+        if(Q(/not fit to plead/i,'c_plead')) continue;
+        if(Q(/risk to national security/i,'c_security')) continue;
+        if(Q(/genocide|war crimes/i,'c_war')) continue;
+        if(Q(/involved in criminal conduct/i,'c_criminal_assoc')) continue;
+        if(Q(/engaged in violence|acts of violence/i,'c_violence_org')) continue;
+        if(Q(/served in a military force|police force/i,'c_military')) continue;
+        if(Q(/paramilitary training|trained in weapons/i,'c_training')) continue;
+        if(Q(/people smuggling|people trafficking/i,'c_smuggling')) continue;
+        if(Q(/removed, deported or excluded/i,'c_deported')) continue;
+        if(Q(/overstayed a visa/i,'c_overstay')) continue;
+        if(Q(/outstanding debts/i,'c_debts')) continue;
+      }
+    }
+    return D;
+  }
+
+  /* ---------- 4. structured data → Visa Form answers ---------- */
+  const relStatus=v=>{ v=clean(v).toLowerCase(); if(/never/.test(v)) return 'Never Married'; if(/de ?facto/.test(v)) return 'In a De Facto Relationship'; if(/^married/.test(v)) return 'Married'; if(/engag/.test(v)) return 'Engaged'; if(/divorc/.test(v)) return 'Divorced'; if(/separat/.test(v)) return 'Separated'; if(/widow/.test(v)) return 'Widow/Widower'; return ''; };
+  const sex=v=>{ v=clean(v).toLowerCase(); return /^f/.test(v)?'Female':/^m/.test(v)?'Male':v?'Other':''; };
+  const level=v=>{ v=clean(v).toLowerCase(); if(!v) return ''; if(/doctor|phd/.test(v)) return 'PhD or equivalent'; if(/master/.test(v)) return 'Master degree or equivalent'; if(/bachelor|graduate/.test(v)) return 'Bachelor degree or equivalent'; if(/diploma|associate/.test(v)) return 'Diploma or equivalent'; if(/certificate/.test(v)) return 'Certificate II, III, IV or equivalent'; if(/year 12|high school|secondary.*complet/.test(v)) return 'Year 12 (high school)'; if(/year 1[01]|year [0-9]\b|below|lower|primary|no formal/.test(v)) return 'Year 11 or lower'; if(/secondary/.test(v)) return 'Year 12 (high school)'; return ''; };
+  const empStatus=v=>{ v=clean(v).toLowerCase(); if(/self/.test(v)) return 'Self Employed'; if(/unemploy|not employ|home duties|retired/.test(v)) return 'Unemployed'; if(/stud/.test(v)) return 'Only Studying'; if(/employ|work/.test(v)) return 'Employed'; return ''; };
+  const tripReason=v=>{ v=clean(v).toLowerCase(); if(/holiday|tourism|leisure|vacation|tour/.test(v)) return 'Holiday'; if(/residence|home country|family|friend|visit/.test(v)) return 'Visit to country of residence'; if(/work|employ/.test(v)) return 'Work'; if(/stud|course|exchange/.test(v)) return 'Study'; if(/business|conference|meeting/.test(v)) return 'Business'; return 'Other'; };
+  const memberRel=v=>{ v=clean(v).toLowerCase(); if(/spouse|partner|de ?facto|husband|wife/.test(v)) return 'Spouse/Partner'; if(/step/.test(v)) return 'Step child'; if(/child|son|daughter/.test(v)) return 'Child'; return ''; };
+  const nonAccRel=v=>{ v=clean(v).toLowerCase(); if(/spouse|partner|de ?facto|husband|wife/.test(v)) return 'Partner'; if(/step/.test(v)) return 'Step Child'; if(/child|son|daughter/.test(v)) return 'Child'; return ''; };
+  const familyRel=(v,sx)=>{ v=clean(v).toLowerCase(); const f=/^f/i.test(clean(sx)); const m=/^m/i.test(clean(sx));
+    if(/mother-in-law|father-in-law|in-law.*parent|parent.*in-law/.test(v)) return f?'Mother-in-law':m?'Father-in-law':'';
+    if(/sister-in-law|brother-in-law|in-law/.test(v)) return f?'Sister-in-law':m?'Brother-in-law':'';
+    if(/step.*(parent|mother|father)/.test(v)) return f?'Step-mother':m?'Step-father':'';
+    if(/step.*(sibling|brother|sister)/.test(v)) return f?'Step-sister':m?'Step-brother':'';
+    if(/parent|mother|father/.test(v)) return f?'Mother':m?'Father':'';
+    if(/sibling|brother|sister/.test(v)) return f?'Sister':m?'Brother':'';
+    return ''; };
+  const engTest=v=>{ v=clean(v).toLowerCase(); if(/ielts/.test(v)) return 'IELTS'; if(/pte|pearson/.test(v)) return 'PTE'; if(/cambridge|cae|advanced|c1/.test(v)) return 'CAE'; if(/toefl/.test(v)) return 'TOEFL'; return ''; };
+  const healthExam=(t)=>{ if(!t) return ''; if(no(t.a)) return ''; const d=t.details||''; let m=/(\d{1,2})[\/.-](\d{4})/.exec(d); if(m) return p2(m[1])+'/'+m[2]; m=/([A-Za-z]{3,})\.?\s+(\d{4})/.exec(d); if(m&&MON[m[1].slice(0,3).toLowerCase()]) return p2(MON[m[1].slice(0,3).toLowerCase()])+'/'+m[2]; return ''; };
+  const money=v=>{ const n=String(v||'').replace(/[^\d.]/g,''); if(!n) return clean(v); const [i,f]=n.split('.'); return i.replace(/\B(?=(\d{3})+(?!\d))/g,',')+(f?'.'+f:''); };
+  const addr=(a,noCountry)=>{ if(!a||!(a.address||a.city)) return null; const o={line1:nice(a.address),line2:'',city:nice(a.city),state:nice(a.state),zip:clean(a.zip)}; if(!noCountry) o.country=country(a.country); return o; };
+  const place=p=>[nice(p.city),nice(p.state),country(p.birthCountry)].filter(Boolean).join(' – ');
+  const otherNamesText=p=>(p.otherNames||[]).map(fullName).filter(Boolean).join('; ');
+  const sortKey=m=>{ const x=/^(\d{2})\/(\d{4})$/.exec(m||''); return x?+x[2]*100+ +x[1]:999999; };
+
+  function toAnswers(D){
+    const A={}; const set=(k,v)=>{ if(v==null) return; if(typeof v==='string'&&!v.trim()) return; if(Array.isArray(v)&&!v.length) return; A[k]=v; };
+    const P=D.primary;
+    set('current_location',country(D.ctx.location));
+    if(P.given||P.family) set('full_name',{first:nice(P.given),last:nice(P.family)});
+    set('sex',sex(P.sex)); set('dob',dmy(P.dob));
+    set('birth_city',nice(P.city)); set('birth_state',nice(P.state)); set('birth_country',country(P.birthCountry));
+    set('relationship',relStatus(P.relStatus));
+    if(P.otherNamesQ){ set('other_names',yn(P.otherNamesQ.a)); if(yes(P.otherNamesQ.a)) set('other_names_details',otherNamesText(P)||P.otherNamesQ.details||''); }
+    else if(otherNamesText(P)){ set('other_names','Yes'); set('other_names_details',otherNamesText(P)); }
+    set('passport_number',clean(P.passport)); set('passport_country',country(P.passportCountry)); set('nationality',country(P.nationality));
+    set('passport_issue',dmy(P.issue)); set('passport_expiry',dmy(P.expiry)); set('passport_authority',clean(P.authority));
+    if(P.otherPassport) set('other_passport',yn(P.otherPassport.a));
+    set('health_exam',healthExam(P.healthExam));
+    /* accompanying members */
+    if(D.q.accompanying) set('accompanying',yn(D.q.accompanying.a));
+    const members=D.members.filter(m=>m.given||m.family).map(m=>{ const o={}; const s=(k,v)=>{ if(v&&(typeof v!=='string'||v.trim())) o[k]=v; };
+      s('relation',memberRel(m.relation)); s('name',{first:nice(m.given),last:nice(m.family)}); s('sex',sex(m.sex)); s('dob',dmy(m.dob));
+      s('passport_number',clean(m.passport)); s('passport_country',country(m.passportCountry)); s('nationality',country(m.nationality)); s('issue',dmy(m.issue)); s('expiry',dmy(m.expiry)); s('authority',clean(m.authority));
+      s('birth_place',place(m)); s('other_names',otherNamesText(m)); s('health_exam',healthExam(m.healthExam)); return o; });
+    if(members.length){ set('accompanying_members',members); if(!A.accompanying) set('accompanying','Yes'); }
+    /* addresses & contact */
+    const res=D.contact.res, post=D.contact.post; const isAU=a=>/australia/i.test(a&&a.country||'');
+    let home=null,au=null;
+    if(isAU(res)){ au=res; if(post.address&&!isAU(post)) home=post; } else { home=res; if(isAU(post)) au=post; }
+    const h=addr(home); if(h) set('home_address',h); const a2=addr(au,true); if(a2) set('au_address',a2);
+    set('au_phone',clean(D.contact.mobile||D.contact.home||D.contact.business));
+    if(D.contact.email){ set('email',D.contact.email.toLowerCase()); set('email_confirm',D.contact.email.toLowerCase()); }
+    /* non-accompanying */
+    const nonacc=D.nonacc.filter(m=>m.given||m.family).map(m=>{ const o={}; const r=nonAccRel(m.relation); if(r) o.relation=r; o.name={first:nice(m.given),last:nice(m.family)}; const d=dmy(m.dob); if(d) o.dob=d; const pl=place(m); if(pl) o.birth_place=pl; return o; });
+    if(nonacc.length){ set('non_acc',[...new Set(nonacc.map(x=>x.relation).filter(Boolean))]); set('non_acc_members',nonacc); }
+    else if(D.q.nonAcc&&no(D.q.nonAcc.a)) set('non_acc',['NO']);
+    /* parents & siblings (+ in-laws) */
+    const fam=D.family.filter(m=>m.given||m.family).map(m=>{ const o={}; const r=familyRel(m.relation,m.sex); if(r) o.relation=r; o.name={first:nice(m.given),last:nice(m.family)}; const d=dmy(m.dob); if(d) o.dob=d; const c=country(m.residence); if(c) o.country=c; return o; });
+    if(fam.length) set('parents_siblings',fam);
+    /* funds */
+    if(D.q.fundsConfirm) set('funds_confirm',yn(D.q.fundsConfirm.a));
+    if(D.q.fundsOther){ if(no(D.q.fundsOther.a)) set('funds_source','Myself'); else { const nm=fullName(D.funds.sponsor); const rel=clean(D.funds.otherRel||(D.funds.rel&&!/^other$/i.test(D.funds.rel)?D.funds.rel:'')); set('funds_source',[nice(nm),rel].filter(Boolean).join(' – ')); } }
+    set('funds_amount',money(D.funds.amount)); set('funds_bank',clean(D.funds.bank));
+    /* education */
+    set('highest_level',level(D.edu.level)); set('highest_course',nice(D.edu.course)); set('highest_institution',clean(D.edu.institution)); set('highest_country',country(D.edu.country));
+    const auC=[],other=[];
+    D.eduHist.forEach(e=>{ if(!(e.course||e.institution)) return; if(e.campus||e.postcode||/australia/i.test(e.country||'')) auC.push(e); else other.push(e); });
+    if(D.q.otherStudies) set('other_studies',yn(D.q.otherStudies.a));
+    if(other.length){ set('other_studies','Yes'); set('other_studies_list',other.map(e=>{ const o={course:[clean(e.course),clean(e.institution)].filter(Boolean).join(' – ')}; const s=my(e.from),en=my(e.to); if(s) o.start=s; if(en) o.end=en; o.status=en?'Completed':'In progress'; return o; })); }
+    if(D.q.studiedAu) set('studied_au',yn(D.q.studiedAu.a));
+    if(auC.length){ set('studied_au','Yes'); set('au_courses',auC.map(e=>{ const o={course:clean(e.course),institution:[clean(e.institution),clean(e.postcode)].filter(Boolean).join(' / ')}; const s=dmy(e.from),en=dmy(e.to); if(s) o.start=s; if(en) o.end=en; return o; })); }
+    /* employment */
+    const curJob=D.jobs.find(j=>j.current);
+    if(curJob) set('employment_status',empStatus(curJob.status));
+    const jobs=D.jobs.filter(j=>j.company&&!/unemploy/i.test(j.status||'')).map(j=>{ const o={company:nice(j.company)}; const ad=addr(j.addr); if(ad) o.address=ad;
+      const c=fullName(j.contact).split(' ').filter(w=>!/^(none|noen|n\/a|na|nil|null|nenhum|-+)$/i.test(w)).join(' '); if(c) o.contact=nice(c); const ph=clean(j.contact.business||j.contact.mobile); if(ph) o.phone=ph; if(j.position) o.position=nice(j.position);
+      const s=my(j.from),en=my(j.to); if(s) o.start=s; if(en) o.end=en; else if(j.current) o.end='currently'; return o; });
+    jobs.sort((x,y)=>sortKey(x.start)-sortKey(y.start));
+    if(jobs.length) set('jobs',jobs);
+    /* language */
+    const L0=D.langs[0]; if(L0){
+      if(L0.englishTest){ if(no(L0.englishTest.a)) set('english_test','NO'); else { const tt=engTest(L0.test||L0.englishTest.details||''); if(tt) set('english_test',tt); set('test_date',dmy(L0.testDate)); set('test_ref',clean(L0.testRef)); set('test_country',country(L0.testCountry)); set('test_score',clean(L0.testScore)); } }
+      set('main_language',nice(L0.main));
+      if(L0.fiveYears) set('five_years',yn(L0.fiveYears.a)); if(L0.seniorSecondary) set('senior_secondary',yn(L0.seniorSecondary.a)); if(L0.aqf) set('aqf',yn(L0.aqf.a)); }
+    if(D.langs[1]&&D.langs[1].main) set('partner_language',nice(D.langs[1].main));
+    /* travel */
+    if(D.q.travelled) set('travelled',yn(D.q.travelled.a));
+    const people=[D.primary,...D.members].filter(p=>p.given||p.family);
+    const trips=[]; D.trips.forEach(t=>{ if(!t.country) return; const raw=clean(t.name); const dob=dmy((/\(([^)]*)\)\s*$/.exec(raw)||[])[1]||''); const nm=raw.replace(/\s*\(.*\)\s*$/,'');
+      const known=people.find(p=>dob&&dmy(p.dob)===dob); let who; if(known) who=nice(fullName(known)); else { const mm=/^(.+?),\s*(.+)$/.exec(nm); who=nice(mm?mm[2]+' '+mm[1]:nm); }
+      const key=[country(t.country),my(t.from),my(t.to),tripReason(t.reason)].join('|'); const ex=trips.find(x=>x.key===key);
+      if(ex){ if(who&&!ex.who.includes(who)) ex.who.push(who); } else trips.push({key,who:who?[who]:[],country:country(t.country),from:my(t.from),to:my(t.to),reason:tripReason(t.reason)}); });
+    if(trips.length){ set('travelled','Yes'); set('trips',trips.map(t=>{ const o={country:t.country,reason:t.reason}; if(t.who.length) o.traveller=t.who.join(' and '); if(t.from) o.from=t.from; if(t.to) o.to=t.to; return o; })); }
+    /* visa history */
+    if(D.q.visasHeld){ const v=D.q.visasHeld; set('visas_held',yes(v.a)?(v.details||'Yes'):no(v.a)?'No':''); }
+    const ynd=(key,fid)=>{ const t=D.q[key]; if(!t) return; set(fid,yn(t.a)); if(yes(t.a)&&t.details) set(fid+'_details',t.details); };
+    ynd('visaBreach','visa_breach'); ynd('visaRefused','visa_refused');
+    ['h_outside','h_hospital','h_doctor','h_childcare','h_tb','h_costs','h_mobility','c_charged','c_convicted','c_dv','c_warrant','c_child','c_register','c_insanity','c_plead','c_security','c_war','c_criminal_assoc','c_violence_org','c_military','c_training','c_smuggling','c_deported','c_overstay','c_debts'].forEach(k=>ynd(k,k));
+    return A;
+  }
+
+  function parse(rows){
+    const text=rows.map(r=>r.l+' '+r.r).join('\n');
+    const isApp=/Application for a Student Visa|Record of Responses|Passport details/i.test(text)||rows.some(r=>/^(Primary applicant|Passport details)$/.test(r.l));
+    const T=tokens(rows); const D=extract(T); const answers=toAnswers(D);
+    let n=0; Object.keys(answers).forEach(k=>{ const v=answers[k]; n+=Array.isArray(v)&&v.length&&typeof v[0]==='object'?v.length:1; });
+    return {ok:isApp&&n>0,answers,count:n,name:fullName(D.primary),data:D};
+  }
+  /* every form field the import can fill (used to clear leftovers when a second PDF replaces a first one) */
+  const FIELDS=['current_location','full_name','sex','dob','birth_city','birth_state','birth_country','relationship','other_names','other_names_details','passport_number','passport_country','nationality','passport_issue','passport_expiry','passport_authority','other_passport','health_exam','accompanying','accompanying_members','home_address','au_address','au_phone','email','email_confirm','non_acc','non_acc_members','parents_siblings','funds_confirm','funds_source','funds_amount','funds_bank','highest_level','highest_course','highest_institution','highest_country','other_studies','other_studies_list','studied_au','au_courses','employment_status','jobs','english_test','test_date','test_ref','test_country','test_score','main_language','five_years','senior_secondary','aqf','partner_language','travelled','trips','visas_held','visa_breach','visa_breach_details','visa_refused','visa_refused_details',
+    'h_outside','h_hospital','h_doctor','h_childcare','h_tb','h_costs','h_mobility','c_charged','c_convicted','c_dv','c_warrant','c_child','c_register','c_insanity','c_plead','c_security','c_war','c_criminal_assoc','c_violence_org','c_military','c_training','c_smuggling','c_deported','c_overstay','c_debts'].flatMap(k=>/^(h_|c_)/.test(k)?[k,k+'_details']:[k]);
+  return {rowsFromPages,tokens,extract,toAnswers,parse,FIELDS};
+})();
+/* === END PREV-APP-IMPORT === */
 
 /* signature pad */
 function sigControl(f,path,id){
@@ -889,8 +1310,8 @@ const TPL=(href,pt,en)=>({href:href,label:T(en,pt)});
 const DOCS={
   title:T('Document Checklist – Student Visa 500','Checklist de Documentos – Student Visa 500'),
   lead:T('Upload each document in its item below. Everything goes straight to Trip Study, and you can see what is still missing. You can come back at any time with your personal link.','Anexe cada documento no item correspondente abaixo. Tudo vai direto para a Trip Study e você vê o que ainda falta. Pode voltar quando quiser pelo seu link pessoal.'),
-  notice:T('<b>IMPORTANT</b><ul><li>Please send your documents in <b>PDF</b> format. Documents in other formats will not be accepted.</li><li>Our team takes <b>3 to 5 business days</b> to review and reply after receiving your documents.</li></ul>',
-           '<b>IMPORTANTE</b><ul><li>Agradecemos por nos enviar os documentos necessários no formato em <b>PDF</b>. Não serão aceitos documentos em outro formato.</li><li>O prazo para análise e resposta da nossa equipe é de <b>03 a 05 dias úteis</b> após o recebimento dos seus documentos.</li></ul>'),
+  notice:T('<b>IMPORTANT</b><ul><li>Please send your documents in <b>PDF</b> format. Documents in other formats will not be accepted.</li><li>Each file must be <b>5 MB or smaller</b>.</li><li>Our team takes <b>3 to 5 business days</b> to review and reply after receiving your documents.</li></ul>',
+           '<b>IMPORTANTE</b><ul><li>Agradecemos por nos enviar os documentos necessários no formato em <b>PDF</b>. Não serão aceitos documentos em outro formato.</li><li>Cada arquivo precisa ter <b>no máximo 5 MB</b>.</li><li>O prazo para análise e resposta da nossa equipe é de <b>03 a 05 dias úteis</b> após o recebimento dos seus documentos.</li></ul>'),
   topics:[
     {n:'01',title:T('Trip information form','Formulário de informações da Trip'),form:'visa',
       text:T('Fill it in very carefully, with all the information requested, at a moment when you have time. Please be honest: immigration may compare it with your previous visas.','Preencha com muita atenção e com todas as informações solicitadas, num momento em que você tenha tempo. Por favor, seja honesto: a imigração pode comparar com seus vistos anteriores.')},
@@ -957,17 +1378,17 @@ const DS={
   notFound:T('This checklist link was not found. Check the link or start again.','Este link de checklist não foi encontrado. Confira o link ou comece de novo.'),
   removeQ:T('Remove this file?','Remover este arquivo?'),
   fail:T('Something went wrong. Check your internet and try again.','Algo deu errado. Verifique sua internet e tente de novo.'),
-  tooBig:T('"{f}" is larger than 20 MB. Send a smaller file.','"{f}" tem mais de 20 MB. Envie um arquivo menor.'),
+  tooBig:T('"{f}" is larger than 5 MB. Each file must be 5 MB or smaller: compress the PDF or send it in a lower resolution.','"{f}" tem mais de 5 MB. Cada arquivo precisa ter no máximo 5 MB: comprima o PDF ou envie em resolução menor.'),
   uploading:T('Uploading {f}…','Enviando {f}…'),
   done:T('uploaded','anexado'),
   pdfOnly:T('"{f}" is not a PDF. Please send documents in PDF format only.','"{f}" não é PDF. Envie os documentos somente em formato PDF.'),
   sending:T('Sending…','Enviando…'),
   linkSentTo:T('Done! We sent your personal link to {e}. Check your inbox (and spam).','Pronto! Mandamos o seu link pessoal para {e}. Confira sua caixa de entrada (e o spam).'),
   myLinkHelp:T('Your personal link reopens this checklist on any device.','O link pessoal abre este checklist de novo em qualquer aparelho.'),
-  pdfNote:T('Preferably PDF (photos and Word files are also accepted) · up to 20 MB','De preferência em PDF (fotos e Word também são aceitos) · até 20 MB'),
+  pdfNote:T('Preferably PDF (photos and Word files are also accepted) · up to 5 MB per file','De preferência em PDF (fotos e Word também são aceitos) · até 5 MB por arquivo'),
   blocked:T('"{f}" cannot be sent: program and installer files are not accepted.','"{f}" não pode ser enviado: arquivos de programas e instaladores não são aceitos.')
 };
-const DOC_MAX=20*1024*1024;
+const DOC_MAX=5*1024*1024; /* checklist: 5 MB per file */
 let D=null, dUp={}, DKEY='tripstudy_docs';
 const dReq=()=>DOCS.topics.flatMap(t=>(t.items||[]).filter(i=>i.req).map(i=>({k:i.k,label:i.file})));
 
